@@ -38,11 +38,13 @@ export async function predictVideo(
 
     if (!response.ok) {
       let message = `서버 오류 (HTTP ${response.status})`;
+      let detailText = '';
       try {
         const body = await response.json();
         if (body.detail) {
-          // 서버 내부 임시 파일 경로(/tmp/...) 숨기기
-          const sanitized = String(body.detail).replace(/\/tmp\/[^\s'"]+/g, '(영상 파일)');
+          detailText = String(body.detail);
+          // 서버 내부 임시 파일 경로(/tmp/...) 사용자 화면 노출 방지
+          const sanitized = detailText.replace(/\/tmp\/[^\s'"]+/g, '(영상 파일)');
           message = sanitized;
         }
       } catch {
@@ -50,7 +52,13 @@ export async function predictVideo(
       }
 
       if (response.status === 400) {
-        throw new Error(`영상 파일을 열 수 없거나 처리할 수 없습니다. 형식이나 파일 손상 여부를 확인해 주세요. (${message})`);
+        if (detailText.includes('영상을 열 수 없음') || detailText.includes('프레임 수를 읽을 수 없음')) {
+          throw new Error('영상 파일을 열거나 디코딩할 수 없습니다. 손상된 영상이거나 지원되지 않는 비디오 코덱일 수 있습니다. 다른 MP4/MOV 파일로 다시 시도해 주세요.');
+        }
+        throw new Error(`영상 파일을 처리할 수 없습니다. 형식이나 파일 손상 여부를 확인해 주세요. (${message})`);
+      }
+      if (response.status === 502 || response.status === 503 || response.status === 504) {
+        throw new Error(`탐지 서버(Modal)가 응답하지 않거나 기동(Cold Start) 중입니다 (HTTP ${response.status}). 잠시 후 [다시 시도]를 눌러주세요.`);
       }
       throw new Error(message);
     }
@@ -61,12 +69,12 @@ export async function predictVideo(
     clearTimeout(timeoutId);
     if (err instanceof DOMException && err.name === 'AbortError') {
       if (signal?.aborted) {
-        throw new Error('사용자에 의해 분석 요청이 취소되었습니다. (참고: 이미 서버에 전달된 작업은 서버에서 계속 실행될 수 있습니다)');
+        throw new Error('사용자에 의해 분석 요청이 취소되었습니다.');
       }
-      throw new Error('요청 시간이 초과되었습니다 (180초). 영상 길이가 길거나 서버 Cold Start 상태일 수 있습니다. 잠시 후 다시 시도해 주세요.');
+      throw new Error('분석 요청 시간이 초과되었습니다 (180초). 영상 길이가 길거나 GPU 서버 초기 기동(Cold Start) 중일 수 있습니다. [다시 시도]를 눌러주세요.');
     }
     if (err instanceof TypeError && err.message.toLowerCase().includes('fetch')) {
-      throw new Error('API 서버에 연결할 수 없습니다. 네트워크 연결 또는 Modal API 프록시 설정을 확인해 주세요.');
+      throw new Error('탐지 서버에 연결할 수 없습니다. 네트워크 연결 상태 또는 Modal 백엔드 프록시 설정을 확인해 주세요.');
     }
     throw err;
   }

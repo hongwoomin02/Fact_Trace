@@ -45,7 +45,11 @@ export default function FrameGallery({ frames }: Props) {
                   />
                 ) : (
                   <div className="frame-placeholder">
-                    {isFace ? '이미지 없음' : '얼굴 미검출'}
+                    {frame.status === 'read_fail'
+                      ? '프레임 손상 (읽기 실패)'
+                      : isFace
+                      ? '얼굴 검출 (이미지 없음)'
+                      : '얼굴 미검출'}
                   </div>
                 )}
                 <span className="frame-badge">#{frame.frame_index}</span>

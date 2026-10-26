@@ -1,0 +1,9 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/video/:path*",
+      "destination": "https://goyeas52--dfvideo-web.us-east.modal.run/:path*"
+    }
+  ]
+}
+

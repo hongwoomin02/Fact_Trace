@@ -32,6 +32,10 @@ export default function VideoUploader({ onAnalyze, isAnalyzing, onReset, initial
   const handleSelectFile = useCallback(
     (file: File | null) => {
       if (isAnalyzing) return;
+      if (file && file.size === 0) {
+        alert('선택한 영상 파일의 크기가 0바이트(빈 파일)입니다. 정상적인 영상 파일을 선택해 주세요.');
+        return;
+      }
       onReset();
 
       setPreviewUrl((prev) => {

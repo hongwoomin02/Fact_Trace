@@ -15,6 +15,8 @@ export default defineConfig(({ mode }) => {
           target: modalTarget,
           changeOrigin: true,
           secure: true,
+          timeout: 180000,
+          proxyTimeout: 180000,
           rewrite: (path) => path.replace(/^\/api\/video/, ''),
         },
       },

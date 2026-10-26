@@ -10,6 +10,7 @@ const INITIAL_STATE: AnalysisState = {
   result: null,
   error: null,
   elapsedMs: null,
+  lastFile: null,
 };
 
 export default function VideoPage() {
@@ -27,6 +28,7 @@ export default function VideoPage() {
       result: null,
       error: null,
       elapsedMs: null,
+      lastFile: file,
     });
 
     try {
@@ -36,18 +38,26 @@ export default function VideoPage() {
         result,
         error: null,
         elapsedMs,
+        lastFile: file,
       });
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
-      setState({
+      setState((prev) => ({
         status: 'error',
         result: null,
         error: errorMessage,
         elapsedMs: null,
-      });
+        lastFile: prev.lastFile,
+      }));
     }
   }, []);
+
+  const handleRetry = useCallback(() => {
+    if (!state.lastFile) return;
+    const ac = new AbortController();
+    handleAnalyze(state.lastFile, ac.signal);
+  }, [state.lastFile, handleAnalyze]);
 
   return (
     <div className="page-container video-page">
@@ -75,12 +85,30 @@ export default function VideoPage() {
             <strong>분석 실패 안내</strong>
           </div>
           <p className="error-alert-message">{state.error}</p>
+
+          {state.lastFile && (
+            <div className="error-retry-action-row">
+              <button
+                className="btn btn-primary btn-retry"
+                onClick={handleRetry}
+              >
+                🔄 동일 파일로 다시 시도
+              </button>
+              <button
+                className="btn btn-secondary"
+                onClick={handleReset}
+              >
+                📁 다른 파일 선택
+              </button>
+            </div>
+          )}
+
           <div className="error-alert-help">
             <p>※ 권장 해결 방법:</p>
             <ul>
               <li>파일 확장자가 MP4, MOV, WEBM 등 일반 동영상 포맷인지 확인해 주세요.</li>
-              <li>파일이 손상되지 않았는지 다른 재생기로 확인해 주세요.</li>
-              <li>서버 Cold Start 상태인 경우 처음 1회는 다소 시간이 걸릴 수 있습니다. 잠시 후 다시 시도해 주세요.</li>
+              <li>0바이트 파일이나 손상된 영상이 아닌지 확인해 주세요.</li>
+              <li>GPU 서버 Cold Start(초기 기동) 상태인 경우 처음 1회는 30초~1분 정도 소요될 수 있으므로 [다시 시도]를 눌러주세요.</li>
             </ul>
           </div>
         </div>
