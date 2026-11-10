@@ -7,7 +7,7 @@ const API_BASE = (
   ''
 ).replace(/\/$/, '');
 
-const IS_MOCK_ENV =
+export const IS_MOCK_ENV =
   import.meta.env.VITE_GEN_MOCK === 'true' ||
   import.meta.env.NEXT_PUBLIC_GEN_MOCK === 'true' ||
   !API_BASE;
@@ -26,19 +26,29 @@ interface MockJobData {
 }
 const mockJobs = new Map<string, MockJobData>();
 
+function request(url: string, options: RequestInit = {}): Promise<Response> {
+  const timeout = AbortSignal.timeout(30_000);
+  return fetch(url, { ...options, signal: options.signal ? AbortSignal.any([options.signal, timeout]) : timeout });
+}
+
+export function resolveGenUrl(path: string): string {
+  return API_BASE ? new URL(path, new URL(`${API_BASE}/`, window.location.origin)).href : path;
+}
+
 /**
  * 1. 템플릿 영상 목록 조회
  */
 export async function fetchTemplates(signal?: AbortSignal): Promise<TemplateVideo[]> {
   if (IS_MOCK_ENV) {
-    const res = await fetch('/templates/templates.json', { signal });
+    const res = await request('/templates/templates.json', { signal });
     if (!res.ok) throw new Error('템플릿 목록을 불러올 수 없습니다.');
     return res.json();
   }
 
-  const res = await fetch(`${API_BASE}/templates`, { signal });
+  const res = await request(`${API_BASE}/templates`, { signal });
   if (!res.ok) throw new Error(`템플릿 조회 오류 (HTTP ${res.status})`);
-  return res.json();
+  const templates: TemplateVideo[] = await res.json();
+  return templates.map(template => ({ ...template, preview_url: resolveGenUrl(template.preview_url) }));
 }
 
 /**
@@ -51,7 +61,7 @@ export async function createJob(
   signal?: AbortSignal
 ): Promise<JobCreateResponse> {
   if (IS_MOCK_ENV) {
-    const jobId = `mock_job_${Date.now()}`;
+    const jobId = `mock_job_${crypto.randomUUID()}`;
     mockJobs.set(jobId, {
       createdAt: Date.now(),
       templateId,
@@ -65,7 +75,7 @@ export async function createJob(
   formData.append('photo', photoBlob, 'photo.jpg');
   formData.append('template_id', templateId);
 
-  const res = await fetch(`${API_BASE}/jobs`, {
+  const res = await request(`${API_BASE}/jobs`, {
     method: 'POST',
     body: formData,
     signal,
@@ -125,11 +135,13 @@ export async function getJobStatus(
     }
   }
 
-  const res = await fetch(`${API_BASE}/jobs/${jobId}`, { signal });
+  const res = await request(`${API_BASE}/jobs/${jobId}`, { signal });
   if (!res.ok) {
     throw new Error(`상태 조회 실패 (HTTP ${res.status})`);
   }
-  return res.json();
+  const result: JobStatusResponse = await res.json();
+  if (result.result_url) result.result_url = resolveGenUrl(result.result_url);
+  return result;
 }
 
 /**
@@ -139,7 +151,7 @@ export async function downloadResultBlob(
   resultUrl: string,
   signal?: AbortSignal
 ): Promise<Blob> {
-  const res = await fetch(resultUrl, { signal });
+  const res = await request(resultUrl, { signal });
   if (!res.ok) throw new Error('결과 영상을 다운로드할 수 없습니다.');
   return res.blob();
 }
@@ -153,13 +165,8 @@ export async function deleteJob(jobId: string): Promise<void> {
     return;
   }
 
-  try {
-    await fetch(`${API_BASE}/jobs/${jobId}`, {
-      method: 'DELETE',
-    });
-  } catch {
-    // 삭제 요청 실패는 사용자 흐름을 막지 않음
-  }
+  const response = await request(`${API_BASE}/jobs/${jobId}`, { method: 'DELETE' });
+  if (!response.ok) throw new Error('서버 파일 삭제에 실패했습니다. 잠시 후 다시 시도해 주세요.');
 }
 
 /**
@@ -180,4 +187,3 @@ export function getErrorMessageByCode(code?: string): string {
       return '합성 서버 내부 처리 중 오류가 발생했습니다. 다시 시도해 주세요.';
   }
 }
-

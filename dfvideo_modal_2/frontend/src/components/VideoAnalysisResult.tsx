@@ -29,6 +29,7 @@ export default function VideoAnalysisResult({ result, elapsedMs }: Props) {
   const verdictInfo = verdictTextMap[result.verdict] || verdictTextMap.UNKNOWN;
   const manipulationScore = getManipulationScore(result);
   const isUnknown = result.verdict === 'UNKNOWN';
+  const isFake = result.verdict === 'FAKE';
 
   return (
     <div className="analysis-result">
@@ -44,15 +45,15 @@ export default function VideoAnalysisResult({ result, elapsedMs }: Props) {
       {/* 2. 핵심 수치 요약 카드 그리드 */}
       <div className="metrics-grid">
         {/* 카드 1: 조작 의심 점수 (0~100 스케일, UNKNOWN은 점수 미표시) */}
-        <div className={`metric-card metric-card--score ${!isUnknown && manipulationScore !== null ? (manipulationScore >= 50 ? 'metric-card--fake' : 'metric-card--real') : ''}`}>
+        <div className={`metric-card metric-card--score ${!isUnknown && manipulationScore !== null ? (isFake ? 'metric-card--fake' : 'metric-card--real') : ''}`}>
           <span className="metric-label">조작 의심 점수 (0~100)</span>
           <div className="score-display-wrapper">
             <span className="metric-value metric-value--score">
-              {!isUnknown && manipulationScore !== null ? `${manipulationScore.toFixed(1)}점` : '판정 불가 (-)'}
+              {!isUnknown && manipulationScore !== null ? `${manipulationScore.toFixed(1)}점` : isUnknown ? '판정 불가 (-)' : '점수 정보 없음'}
             </span>
             {!isUnknown && manipulationScore !== null && (
-              <span className={`score-badge ${manipulationScore >= 50 ? 'score-badge--fake' : 'score-badge--real'}`}>
-                {manipulationScore >= 50 ? '조작 의심' : '진본 유사'}
+              <span className={`score-badge ${isFake ? 'score-badge--fake' : 'score-badge--real'}`}>
+                {isFake ? '조작 의심' : '진본 유사'}
               </span>
             )}
           </div>
@@ -73,7 +74,7 @@ export default function VideoAnalysisResult({ result, elapsedMs }: Props) {
             </div>
           ) : (
             <div className="gauge-unknown-notice">
-              얼굴 미검출로 점수 산출 불가
+              {isUnknown ? '유효한 얼굴 분석 결과가 없어 점수를 표시하지 않습니다.' : '서버 응답에 유효한 점수가 없습니다.'}
             </div>
           )}
 
@@ -153,4 +154,3 @@ export default function VideoAnalysisResult({ result, elapsedMs }: Props) {
     </div>
   );
 }
-

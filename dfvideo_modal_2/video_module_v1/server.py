@@ -9,7 +9,7 @@
     브라우저에서 http://localhost:8000/docs   -> API 문서 (여기서도 직접 호출 가능)
 """
 import os
-import shutil
+import logging
 import tempfile
 
 from fastapi import FastAPI, File, HTTPException, Query, UploadFile
@@ -20,6 +20,7 @@ from predict_api import API_VERSION, Detector
 MODEL = os.getenv('DF_MODEL', 'v4')
 app = FastAPI(title='deepfake-video-detector', version=API_VERSION)
 _det = None
+logger = logging.getLogger(__name__)
 
 
 def det():
@@ -40,17 +41,35 @@ def health():
 def predict(file: UploadFile = File(...), return_frames: bool = Query(False)):
     """영상 1편 -> 판정 JSON. return_frames=true면 얼굴 crop을 base64 JPEG로 함께 반환."""
     suffix = os.path.splitext(file.filename or '')[1] or '.mp4'
-    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as f:
-        shutil.copyfileobj(file.file, f)
-        tmp = f.name
+    tmp = None
     try:
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as f:
+            tmp = f.name
+            size = 0
+            while chunk := file.file.read(1024 * 1024):
+                size += len(chunk)
+                if size > 50 * 1024 * 1024:
+                    raise HTTPException(status_code=413, detail='영상 크기는 50MB 이하여야 합니다.')
+                f.write(chunk)
+            if size == 0:
+                raise HTTPException(status_code=400, detail='빈 영상 파일입니다.')
         r = det().predict_video(tmp, return_base64=return_frames)
-        r['video'] = file.filename
+        r['video'] = file.filename or 'upload.mp4'
         return r
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail='영상 파일을 열거나 디코딩할 수 없습니다. 파일 형식과 손상 여부를 확인해 주세요.') from e
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception('영상 분석 요청 처리 실패')
+        raise HTTPException(status_code=500, detail='영상 분석 중 서버 오류가 발생했습니다.') from e
     finally:
-        os.remove(tmp)
+        file.file.close()
+        if tmp is not None:
+            try:
+                os.remove(tmp)
+            except OSError:
+                logger.exception('임시 영상 파일 정리 실패')
 
 
 PAGE = """<!doctype html><html lang="ko"><head><meta charset="utf-8">

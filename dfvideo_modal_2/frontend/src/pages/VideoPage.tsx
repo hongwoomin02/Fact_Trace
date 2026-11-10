@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import VideoUploader from '../components/VideoUploader';
 import VideoAnalysisResult from '../components/VideoAnalysisResult';
@@ -17,12 +17,23 @@ export default function VideoPage() {
   const location = useLocation();
   const autoLoadFile = (location.state as { autoLoadFile?: File })?.autoLoadFile || null;
   const [state, setState] = useState<AnalysisState>(INITIAL_STATE);
+  const requestRef = useRef<AbortController | null>(null);
+  const [uploaderKey, setUploaderKey] = useState(0);
+  useEffect(() => () => {
+    requestRef.current?.abort();
+    requestRef.current = null;
+  }, []);
 
   const handleReset = useCallback(() => {
+    requestRef.current?.abort();
+    requestRef.current = null;
     setState(INITIAL_STATE);
   }, []);
 
-  const handleAnalyze = useCallback(async (file: File, signal: AbortSignal) => {
+  const handleAnalyze = useCallback(async (file: File) => {
+    requestRef.current?.abort();
+    const request = new AbortController();
+    requestRef.current = request;
     setState({
       status: 'uploading',
       result: null,
@@ -32,7 +43,8 @@ export default function VideoPage() {
     });
 
     try {
-      const { result, elapsedMs } = await predictVideo(file, signal);
+      const { result, elapsedMs } = await predictVideo(file, request.signal);
+      if (requestRef.current !== request) return;
       setState({
         status: 'done',
         result,
@@ -41,6 +53,7 @@ export default function VideoPage() {
         lastFile: file,
       });
     } catch (err) {
+      if (requestRef.current !== request) return;
       const errorMessage =
         err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
       setState((prev) => ({
@@ -50,13 +63,14 @@ export default function VideoPage() {
         elapsedMs: null,
         lastFile: prev.lastFile,
       }));
+    } finally {
+      if (requestRef.current === request) requestRef.current = null;
     }
   }, []);
 
   const handleRetry = useCallback(() => {
     if (!state.lastFile) return;
-    const ac = new AbortController();
-    handleAnalyze(state.lastFile, ac.signal);
+    handleAnalyze(state.lastFile);
   }, [state.lastFile, handleAnalyze]);
 
   return (
@@ -71,10 +85,12 @@ export default function VideoPage() {
 
       {/* 영상 업로드 컴포넌트 */}
       <VideoUploader
+        key={uploaderKey}
         onAnalyze={handleAnalyze}
+        onCancel={() => requestRef.current?.abort()}
         isAnalyzing={state.status === 'uploading'}
         onReset={handleReset}
-        initialFile={autoLoadFile}
+        initialFile={uploaderKey === 0 ? autoLoadFile : null}
       />
 
       {/* 오류 메시지 박스 */}
@@ -96,7 +112,7 @@ export default function VideoPage() {
               </button>
               <button
                 className="btn btn-secondary"
-                onClick={handleReset}
+                onClick={() => { handleReset(); setUploaderKey(k => k + 1); }}
               >
                 📁 다른 파일 선택
               </button>
@@ -121,4 +137,3 @@ export default function VideoPage() {
     </div>
   );
 }
-

@@ -16,10 +16,10 @@ export interface JobCreateResponse {
 }
 
 export interface JobStatusResponse {
+  simulated?: boolean;
   status: JobStatus;
   progress?: number;
   error_code?: GenErrorCode | string;
   message?: string;
   result_url?: string;
 }
-

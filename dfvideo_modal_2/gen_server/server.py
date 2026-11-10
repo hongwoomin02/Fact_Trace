@@ -19,6 +19,7 @@ import shutil
 import asyncio
 import logging
 import subprocess
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional, Dict, Any
 
@@ -43,7 +44,21 @@ MAX_CONCURRENT_JOBS = int(os.getenv("MAX_CONCURRENT_JOBS", "2"))
 FACEFUSION_PATH = os.getenv("FACEFUSION_PATH", "facefusion.py")
 USE_REAL_GPU = os.getenv("USE_REAL_GPU", "false").lower() in ("true", "1", "yes")
 
+@asynccontextmanager
+async def lifespan(app):
+    cleanup_task = asyncio.create_task(periodic_cleanup())
+    try:
+        yield
+    finally:
+        cleanup_task.cancel()
+        running = list(tasks.values())
+        for task in running:
+            task.cancel()
+        await asyncio.gather(cleanup_task, *running, return_exceptions=True)
+
+
 app = FastAPI(
+    lifespan=lifespan,
     title="Fact-Trace AI - FaceFusion Video Synthesis Server",
     description="발표 시연용 방문객 웹캠 얼굴 딥페이크 영상 생성 백엔드 API",
     version="1.0.0",
@@ -53,7 +68,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # 실제 운영 시 특정 도메인으로 축소 가능
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
@@ -102,6 +117,7 @@ PRESET_TEMPLATES = [
 # 구조: { job_id: dict }
 jobs: Dict[str, Dict[str, Any]] = {}
 active_processing_count = 0
+tasks: Dict[str, asyncio.Task] = {}
 
 
 # ─────────────────────────────────────────────────────────────
@@ -124,7 +140,7 @@ async def create_job(
 
     # 1) 파일 포맷 및 크기 유효성 검사
     if not photo.content_type or not (
-        photo.content_type.startswith("image/") or photo.filename.lower().endswith((".jpg", ".jpeg", ".png", ".webp"))
+        photo.content_type.startswith("image/") or (photo.filename or '').lower().endswith((".jpg", ".jpeg", ".png", ".webp"))
     ):
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -158,7 +174,10 @@ async def create_job(
 
     # 사진 파일 디스크 저장
     try:
-        content = await photo.read()
+        content = await photo.read(10 * 1024 * 1024 + 1)
+        if not content:
+            shutil.rmtree(job_dir, ignore_errors=True)
+            return JSONResponse(status_code=400, content={"error_code": "INVALID_IMAGE", "message": "빈 사진 파일입니다."})
         if len(content) > 10 * 1024 * 1024:  # 10MB 초과
             shutil.rmtree(job_dir, ignore_errors=True)
             return JSONResponse(
@@ -175,6 +194,12 @@ async def create_job(
             content={"error_code": "INTERNAL", "message": "사진 업로드 처리 중 오류가 발생했습니다."},
         )
 
+    # Upload awaits allow other requests to reserve a slot; check again before reservation.
+    if active_processing_count >= MAX_CONCURRENT_JOBS:
+        shutil.rmtree(job_dir, ignore_errors=True)
+        return JSONResponse(status_code=503, content={"error_code": "SERVER_BUSY", "message": "합성 서버가 사용 중입니다. 잠시 후 다시 시도해 주세요."})
+    active_processing_count += 1
+
     # 작업 상태 등록
     jobs[job_id] = {
         "job_id": job_id,
@@ -188,10 +213,17 @@ async def create_job(
         "result_url": f"/jobs/{job_id}/result",
         "error_code": None,
         "message": None,
+        "simulated": not USE_REAL_GPU,
     }
 
     # 백그라운드 합성 작업 시작
-    asyncio.create_task(run_synthesis_task(job_id))
+    task = asyncio.create_task(run_synthesis_task(job_id))
+    tasks[job_id] = task
+    def release_slot(completed):
+        global active_processing_count
+        tasks.pop(job_id, None)
+        active_processing_count = max(0, active_processing_count - 1)
+    task.add_done_callback(release_slot)
 
     return {"job_id": job_id}
 
@@ -211,6 +243,7 @@ async def get_job_status(job_id: str):
     resp: Dict[str, Any] = {
         "status": job["status"],
         "progress": job["progress"],
+        "simulated": job.get("simulated", False),
     }
 
     if job["status"] == "done":
@@ -258,15 +291,24 @@ async def get_job_result(job_id: str):
 # ─────────────────────────────────────────────────────────────
 @app.delete("/jobs/{job_id}", status_code=status.HTTP_204_NO_CONTENT, summary="개인정보 및 생성 파일 즉시 파기")
 async def delete_job(job_id: str):
-    job = jobs.pop(job_id, None)
+    job = jobs.get(job_id)
     if job:
+        task = tasks.get(job_id)
+        if task and not task.done():
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
         job_dir = Path(job.get("job_dir", ""))
         if job_dir.exists():
             try:
-                shutil.rmtree(job_dir, ignore_errors=True)
+                shutil.rmtree(job_dir)
                 logger.info(f"[{job_id}] 개인정보 보호: 사진 및 결과 파일 즉시 삭제 완료")
             except Exception as e:
                 logger.warning(f"[{job_id}] 파일 삭제 중 오류: {e}")
+                raise HTTPException(status_code=500, detail="파일 삭제에 실패했습니다. 다시 시도해 주세요.") from e
+        jobs.pop(job_id, None)
     return None
 
 
@@ -274,12 +316,10 @@ async def delete_job(job_id: str):
 # 비동기 합성 파이프라인 (FaceFusion CLI 연동 + 시뮬레이션 폴백)
 # ─────────────────────────────────────────────────────────────
 async def run_synthesis_task(job_id: str):
-    global active_processing_count
-    active_processing_count += 1
     job = jobs.get(job_id)
     if not job:
-        active_processing_count = max(0, active_processing_count - 1)
         return
+    process = None
 
     job["status"] = "processing"
     logger.info(f"[{job_id}] 합성 시작 (템플릿: {job['template_id']})")
@@ -290,16 +330,15 @@ async def run_synthesis_task(job_id: str):
 
     # 템플릿 비디오 파일 경로
     template_video = TEMPLATES_DIR / f"{template_id}.mp4"
-    if not template_video.exists():
-        # 기본 fallback template
-        sample_files = list(TEMPLATES_DIR.glob("*.mp4"))
-        if sample_files:
-            template_video = sample_files[0]
 
     try:
         # 실제 FaceFusion GPU 실행 조건 확인
         facefusion_bin = Path(FACEFUSION_PATH)
         can_run_facefusion = USE_REAL_GPU and facefusion_bin.exists()
+        if USE_REAL_GPU and not can_run_facefusion:
+            raise RuntimeError('FaceFusion 실행 파일이 설정되지 않았습니다.')
+        if not template_video.exists():
+            raise RuntimeError('합성용 원본 영상이 없습니다.')
 
         if can_run_facefusion:
             # ───────────────────────────────────────────────────────
@@ -330,7 +369,7 @@ async def run_synthesis_task(job_id: str):
                 await asyncio.sleep(0.8)
                 job["progress"] = p
 
-            stdout, stderr = await process.communicate()
+            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=280)
 
             if process.returncode != 0:
                 err_msg = stderr.decode("utf-8", errors="ignore")
@@ -352,6 +391,8 @@ async def run_synthesis_task(job_id: str):
                     job["message"] = "FaceFusion 합성 엔진 처리 중 오류가 발생했습니다."
                     return
 
+            if not Path(output_path).is_file() or Path(output_path).stat().st_size == 0:
+                raise RuntimeError('합성 엔진이 결과 영상을 생성하지 않았습니다.')
             job["progress"] = 100
             job["status"] = "done"
             logger.info(f"[{job_id}] FaceFusion GPU 합성 성공 완료!")
@@ -375,33 +416,28 @@ async def run_synthesis_task(job_id: str):
                 await asyncio.sleep(duration)
                 job["progress"] = prog
 
-            # 결과물 파일 생성 (템플릿 복사 또는 샘플 MP4 저장)
-            if template_video.exists():
-                shutil.copyfile(str(template_video), output_path)
-            else:
-                # 비상용 최소 유효 MP4 바이트
-                tiny_mp4_b64 = (
-                    "AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAAIZnJlZQAAAr9tZGF0AAACoAYF"
-                    "//+///AAAAMmF2Y0MBZAAK/+EAGWdkAAqs2V+WXAWyAAADAAIAAAMAYB4kSywBAAZo6+PLIsAAAAAY"
-                    "c3R0cwAAAAAAAAABAAAAAQAAAgAAAAAcc3RzYwAAAAAAAAABAAAAAQAAAAEAAAABAAAAFHN0c3oAAA"
-                    "AAAAACtwAAAAEAAAAUc3RjbwAAAAAAAAABAAAAMAAAAGJ1ZHRhAAAAWm1ldGEAAAAAAAAAIWhkbHIA"
-                    "AAAAAAAAAG1kaXJhcHBsAAAAAAAAAAAAAAAALWlsc3QAAAAlqXRvbwAAAB1kYXRhAAAAAQAAAABMYXZm"
-                    "NTQuNjMuMTA0"
-                )
-                import base64
-                with open(output_path, "wb") as f:
-                    f.write(base64.b64decode(tiny_mp4_b64))
+            # 모의 실행은 준비된 원본만 복사한다. 파일이 사라지면 오류로 처리한다.
+            shutil.copyfile(str(template_video), output_path)
 
             job["status"] = "done"
             logger.info(f"[{job_id}] 모의 합성 완료 (결과 파일 준비됨)")
 
+    except asyncio.TimeoutError:
+        job["status"] = "error"
+        job["error_code"] = "TIMEOUT"
+        job["message"] = "합성 처리 시간이 초과되었습니다. 다시 시도해 주세요."
     except Exception as e:
         logger.error(f"[{job_id}] 예외 발생: {e}")
         job["status"] = "error"
         job["error_code"] = "INTERNAL"
-        job["message"] = f"합성 서버 내부 처리 중 오류가 발생했습니다: {str(e)}"
+        job["message"] = "합성 서버 내부 처리 중 오류가 발생했습니다."
     finally:
-        active_processing_count = max(0, active_processing_count - 1)
+        if process is not None and process.returncode is None:
+            try:
+                process.kill()
+            except ProcessLookupError:
+                pass
+            await process.communicate()
 
 
 # ─────────────────────────────────────────────────────────────
@@ -417,25 +453,14 @@ async def periodic_cleanup():
                 if now - info.get("created_at", 0) > 1800  # 30분
             ]
             for jid in expired_ids:
-                info = jobs.pop(jid, None)
-                if info:
-                    job_dir = Path(info.get("job_dir", ""))
-                    if job_dir.exists():
-                        shutil.rmtree(job_dir, ignore_errors=True)
+                await delete_job(jid)
             if expired_ids:
                 logger.info(f"만료된 임시 작업 {len(expired_ids)}개 자동 정리 완료")
         except Exception as e:
             logger.warning(f"자동 정리 오류: {e}")
 
 
-@app.on_event("startup")
-async def startup_event():
-    asyncio.create_task(periodic_cleanup())
-    logger.info("FaceFusion 생성 서버 시작됨 (CORS / 5개 엔드포인트 / TTL 자동 정리 활성화)")
-
-
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", "8002"))
     uvicorn.run("server:app", host="0.0.0.0", port=port, reload=True)
-

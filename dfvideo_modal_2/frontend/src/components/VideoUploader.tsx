@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 
 interface Props {
-  onAnalyze: (file: File, signal: AbortSignal) => void;
+  onAnalyze: (file: File) => void;
+  onCancel: () => void;
   isAnalyzing: boolean;
   onReset: () => void;
   initialFile?: File | null;
@@ -13,35 +14,37 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export default function VideoUploader({ onAnalyze, isAnalyzing, onReset, initialFile }: Props) {
+export default function VideoUploader({ onAnalyze, onCancel, isAnalyzing, onReset, initialFile }: Props) {
   const [selectedFile, setSelectedFile] = useState<File | null>(initialFile || null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(() => (initialFile ? URL.createObjectURL(initialFile) : null));
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
 
   // 언마운트 시 미리보기 URL 정리
   useEffect(() => {
-    return () => {
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-      }
-    };
-  }, [previewUrl]);
+    const url = selectedFile ? URL.createObjectURL(selectedFile) : null;
+    // eslint-disable-next-line react/set-state-in-effect -- Synchronize an external blob URL with its cleanup lifecycle.
+    setPreviewUrl(url);
+    return () => { if (url) URL.revokeObjectURL(url); };
+  }, [selectedFile]);
 
   const handleSelectFile = useCallback(
     (file: File | null) => {
       if (isAnalyzing) return;
+      if (file && !(file.type.startsWith('video/') || /\.(mp4|avi|mov|mkv|webm)$/i.test(file.name))) {
+        alert('동영상 파일만 업로드할 수 있습니다.');
+        return;
+      }
       if (file && file.size === 0) {
         alert('선택한 영상 파일의 크기가 0바이트(빈 파일)입니다. 정상적인 영상 파일을 선택해 주세요.');
         return;
       }
+      if (file && file.size > 50 * 1024 * 1024) {
+        alert('영상 크기는 50MB 이하여야 합니다.');
+        return;
+      }
       onReset();
 
-      setPreviewUrl((prev) => {
-        if (prev) URL.revokeObjectURL(prev);
-        return file ? URL.createObjectURL(file) : null;
-      });
       setSelectedFile(file);
     },
     [isAnalyzing, onReset]
@@ -78,15 +81,11 @@ export default function VideoUploader({ onAnalyze, isAnalyzing, onReset, initial
 
   const handleStartAnalysis = () => {
     if (!selectedFile || isAnalyzing) return;
-    const ac = new AbortController();
-    abortControllerRef.current = ac;
-    onAnalyze(selectedFile, ac.signal);
+    onAnalyze(selectedFile);
   };
 
   const handleCancelAnalysis = () => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
+    onCancel();
   };
 
   const handleFullReset = () => {
@@ -114,6 +113,12 @@ export default function VideoUploader({ onAnalyze, isAnalyzing, onReset, initial
           if (!isAnalyzing) fileInputRef.current?.click();
         }}
         role="button"
+        onKeyDown={(e) => {
+          if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault();
+            if (!isAnalyzing) fileInputRef.current?.click();
+          }
+        }}
         tabIndex={0}
       >
         <input
@@ -135,7 +140,7 @@ export default function VideoUploader({ onAnalyze, isAnalyzing, onReset, initial
           <p className="drop-secondary-text">
             {selectedFile
               ? `크기: ${formatFileSize(selectedFile.size)} · 다른 파일을 선택하려면 클릭`
-              : 'MP4, MOV, WEBM 등의 영상 파일 지원 (권장 50MB 이하)'}
+              : 'MP4, MOV, WEBM 등의 영상 파일 지원 (최대 50MB)'}
           </p>
         </div>
       </div>

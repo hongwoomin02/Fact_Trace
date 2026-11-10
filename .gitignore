@@ -1,0 +1,23 @@
+# Local secrets, caches, dependencies and generated visitor data
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+node_modules/
+dist/
+dfvideo_modal_2/gen_server/storage/
+weights/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+samples/
+test_inputs/
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.webm

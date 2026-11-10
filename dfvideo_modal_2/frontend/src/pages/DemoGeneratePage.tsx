@@ -8,6 +8,7 @@ import {
   downloadResultBlob,
   getErrorMessageByCode,
   DETECT_URL,
+  IS_MOCK_ENV,
 } from '../lib/genApi';
 
 type Step = 1 | 2 | 3;
@@ -44,6 +45,7 @@ export default function DemoGeneratePage() {
   const [photoBlob, setPhotoBlob] = useState<Blob | null>(null);
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
   const cameraStreamRef = useRef<MediaStream | null>(null);
+  const cameraRequestRef = useRef(0);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
 
@@ -66,6 +68,9 @@ export default function DemoGeneratePage() {
 
   const pollingTimerRef = useRef<number | null>(null);
   const jobStartTimeRef = useRef<number>(0);
+  const synthesisRef = useRef<AbortController | null>(null);
+  const [isSimulated, setIsSimulated] = useState(IS_MOCK_ENV);
+  const [templateError, setTemplateError] = useState<string | null>(null);
 
   // URL mockError 파라미터 확인 (?mockError=FACE_NOT_FOUND 등)
   const getMockErrorParam = (): GenErrorCode | null => {
@@ -78,6 +83,7 @@ export default function DemoGeneratePage() {
   // 1단계: 웹캠 카메라 라이프사이클 (안정적인 Ref 기반)
   // ───────────────────────────────────────────
   const stopCamera = useCallback(() => {
+    cameraRequestRef.current += 1;
     if (cameraStreamRef.current) {
       cameraStreamRef.current.getTracks().forEach((track) => {
         try {
@@ -93,6 +99,7 @@ export default function DemoGeneratePage() {
 
   const startCamera = useCallback(async () => {
     stopCamera();
+    const cameraRequest = cameraRequestRef.current;
     setCameraError(null);
 
     // 보안 컨텍스트 확인 (HTTPS 또는 localhost)
@@ -116,12 +123,17 @@ export default function DemoGeneratePage() {
         audio: false,
       });
 
+      if (cameraRequest !== cameraRequestRef.current) {
+        stream.getTracks().forEach(track => track.stop());
+        return;
+      }
       cameraStreamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         videoRef.current.play().catch(() => {});
       }
     } catch (err: unknown) {
+      if (cameraRequest !== cameraRequestRef.current) return;
       const e = err as { name?: string; message?: string };
       if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
         setCameraError('카메라 사용 권한이 차단되었습니다. 브라우저 주소창 좌측의 설정/자물쇠 아이콘을 눌러 카메라 권한을 [허용]하신 후 아래 [카메라 다시 연결]을 눌러주세요.');
@@ -153,9 +165,11 @@ export default function DemoGeneratePage() {
   useEffect(() => {
     return () => {
       if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl);
-      if (resultVideoUrl && !resultVideoUrl.startsWith('/')) URL.revokeObjectURL(resultVideoUrl);
     };
-  }, [photoPreviewUrl, resultVideoUrl]);
+  }, [photoPreviewUrl]);
+  useEffect(() => () => {
+    if (resultVideoUrl?.startsWith('blob:')) URL.revokeObjectURL(resultVideoUrl);
+  }, [resultVideoUrl]);
 
   // 사진 촬영 (3초 카운트다운)
   const handleCaptureWithCountdown = () => {
@@ -229,7 +243,6 @@ export default function DemoGeneratePage() {
     setPhotoBlob(null);
     setPhotoPreviewUrl(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
-    startCamera();
   };
 
   // 1단계 완료 -> 2단계로 진행
@@ -242,7 +255,7 @@ export default function DemoGeneratePage() {
   // 2단계: 템플릿 목록 로드 및 선택
   // ───────────────────────────────────────────
   useEffect(() => {
-    if (currentStep === 2 && templates.length === 0) {
+    if (currentStep === 2 && templates.length === 0 && !templateError) {
       setLoadingTemplates(true);
       fetchTemplates()
         .then((tpls) => {
@@ -252,16 +265,11 @@ export default function DemoGeneratePage() {
           }
         })
         .catch(() => {
-          // fetch 실패 시 기본 템플릿 폴백
-          setTemplates([
-            { id: 'tpl_anchor_01', title: '뉴스 앵커 브리핑', duration_sec: 3.2, thumbnail_url: '/templates/thumb_news.svg', preview_url: '' },
-            { id: 'tpl_interview_02', title: '단독 인터뷰', duration_sec: 4.0, thumbnail_url: '/templates/thumb_interview.svg', preview_url: '' },
-          ]);
-          setSelectedTemplateId('tpl_anchor_01');
+          setTemplateError('원본 영상 목록을 불러오지 못했습니다. 다시 시도해 주세요.');
         })
         .finally(() => setLoadingTemplates(false));
     }
-  }, [currentStep, templates.length, selectedTemplateId]);
+  }, [currentStep, templates.length, selectedTemplateId, templateError]);
 
   // 2단계 완료 -> 3단계 합성 시작
   const handleProceedToStep3 = () => {
@@ -278,6 +286,10 @@ export default function DemoGeneratePage() {
   // ───────────────────────────────────────────
   const startSynthesis = async () => {
     if (!photoBlob || !selectedTemplateId) return;
+    synthesisRef.current?.abort();
+    if (pollingTimerRef.current) clearTimeout(pollingTimerRef.current);
+    const controller = new AbortController();
+    synthesisRef.current = controller;
 
     setJobError(null);
     setJobStatus('queued');
@@ -288,12 +300,14 @@ export default function DemoGeneratePage() {
 
     try {
       const mockOverride = getMockErrorParam();
-      const res = await createJob(photoBlob, selectedTemplateId, mockOverride);
+      const res = await createJob(photoBlob, selectedTemplateId, mockOverride, controller.signal);
+      if (controller.signal.aborted) return;
       setJobId(res.job_id);
 
       // 2초 간격 상태 폴링 시작
-      pollStatus(res.job_id);
+      pollStatus(res.job_id, controller.signal);
     } catch (err: unknown) {
+      if (controller.signal.aborted) return;
       const e = err as { code?: string; message?: string };
       const code = (e.code as GenErrorCode) || 'INTERNAL';
       setJobStatus('error');
@@ -301,10 +315,11 @@ export default function DemoGeneratePage() {
     }
   };
 
-  const pollStatus = (id: string) => {
+  const pollStatus = (id: string, signal: AbortSignal) => {
     if (pollingTimerRef.current) clearInterval(pollingTimerRef.current);
 
-    pollingTimerRef.current = window.setInterval(async () => {
+    const poll = async () => {
+      if (signal.aborted) return;
       // 5분(300초) 초과 검사
       const elapsedSec = (Date.now() - jobStartTimeRef.current) / 1000;
       if (elapsedSec > 300) {
@@ -315,7 +330,9 @@ export default function DemoGeneratePage() {
       }
 
       try {
-        const res = await getJobStatus(id);
+        const res = await getJobStatus(id, signal);
+        if (signal.aborted) return;
+        setIsSimulated(IS_MOCK_ENV || res.simulated === true);
         setJobStatus(res.status);
         if (typeof res.progress === 'number') {
           setProgress(res.progress);
@@ -327,27 +344,38 @@ export default function DemoGeneratePage() {
 
           // 비디오 Blob 다운로드 및 로드
           try {
-            const blob = await downloadResultBlob(res.result_url);
+            const blob = await downloadResultBlob(res.result_url, signal);
+            if (signal.aborted) return;
             setResultVideoBlob(blob);
             const objectUrl = URL.createObjectURL(blob);
             setResultVideoUrl(objectUrl);
           } catch {
-            // Blob 실패 시 result_url 직접 사용
-            setResultVideoUrl(res.result_url);
+            if (signal.aborted) return;
+            setJobStatus('error');
+            setJobError({ code: 'INTERNAL', message: '결과 영상 다운로드에 실패했습니다. 다시 시도해 주세요.' });
           }
+          return;
         } else if (res.status === 'error') {
           if (pollingTimerRef.current) clearInterval(pollingTimerRef.current);
           const code = (res.error_code as GenErrorCode) || 'INTERNAL';
           setJobError({ code, message: res.message || getErrorMessageByCode(code) });
+          return;
+        } else if (res.status === 'done') {
+          setJobStatus('error');
+          setJobError({ code: 'INTERNAL', message: '서버 응답에 결과 영상 주소가 없습니다.' });
+          return;
         }
       } catch {
         // 일시적 네트워크 에러는 다음 폴링 시도
       }
-    }, 2000);
+      if (!signal.aborted) pollingTimerRef.current = window.setTimeout(poll, 2000);
+    };
+    pollingTimerRef.current = window.setTimeout(poll, 2000);
   };
 
   useEffect(() => {
     return () => {
+      synthesisRef.current?.abort();
       if (pollingTimerRef.current) clearInterval(pollingTimerRef.current);
     };
   }, []);
@@ -386,9 +414,17 @@ export default function DemoGeneratePage() {
   };
 
   // [처음부터 다시] 버튼: 모든 상태 초기화 & DELETE /jobs/{id}
-  const handleResetAll = () => {
+  const handleResetAll = async () => {
+    synthesisRef.current?.abort();
+    if (pollingTimerRef.current) clearTimeout(pollingTimerRef.current);
     if (jobId) {
-      deleteJob(jobId);
+      try {
+        await deleteJob(jobId);
+      } catch {
+        setJobStatus('error');
+        setJobError({ code: 'INTERNAL', message: '서버 파일 삭제를 확인하지 못했습니다. [처음부터 다시]를 눌러 삭제를 재시도해 주세요.' });
+        return;
+      }
     }
     if (pollingTimerRef.current) clearInterval(pollingTimerRef.current);
     if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl);
@@ -404,10 +440,13 @@ export default function DemoGeneratePage() {
     setResultVideoBlob(null);
     setCurrentStep(1);
     setHasAgreed(false);
+    setTemplateError(null);
   };
 
   return (
     <div className="page-container demo-generate-container">
+      {isSimulated && <p role="status">모의 실행: 결과는 준비된 샘플 영상이며, 방문객 사진으로 실제 얼굴 합성을 수행한 결과가 아닙니다.</p>}
+      {templateError && <div role="alert">{templateError} <button onClick={() => setTemplateError(null)}>목록 다시 불러오기</button></div>}
       {/* 상단 시연 전용 배너 */}
       <div className="demo-header-banner">
         <span className="demo-pill-badge">발표 시연 체험용</span>
@@ -724,6 +763,10 @@ export default function DemoGeneratePage() {
                   autoPlay
                   loop
                   className="result-video-element"
+                  onError={() => {
+                    setJobStatus('error');
+                    setJobError({ code: 'INTERNAL', message: '결과 영상을 재생할 수 없습니다. 서버의 원본·샘플 영상이 정상적인 MP4 파일인지 확인해 주세요.' });
+                  }}
                 />
               </div>
 
@@ -756,7 +799,7 @@ export default function DemoGeneratePage() {
 
               <div className="result-safe-notice">
                 <small>
-                  ※ [처음부터 다시]를 누르면 브라우저 메모리와 서버에 전송된 사진·결과 파일이 즉시 안전하게 파기됩니다.
+                  ※ [처음부터 다시]는 사진·결과 삭제를 요청합니다. 서버 삭제에 실패하면 안내 메시지가 표시되므로 다시 시도해 주세요.
                 </small>
               </div>
             </div>
@@ -766,4 +809,3 @@ export default function DemoGeneratePage() {
     </div>
   );
 }
-
