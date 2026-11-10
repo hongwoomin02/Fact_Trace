@@ -1,0 +1,35 @@
+[
+  {
+    "id": "tpl_anchor_01",
+    "title": "뉴스 앵커 브리핑 (정면)",
+    "duration_sec": 3.2,
+    "thumbnail_url": "/templates/thumb_news.svg",
+    "preview_url": "",
+    "description": "정면 시선이 고정되어 있고 얼굴 윤곽이 또렷한 고화질 스튜디오 영상"
+  },
+  {
+    "id": "tpl_interview_02",
+    "title": "단독 인터뷰 (자연스러운 표정)",
+    "duration_sec": 4.0,
+    "thumbnail_url": "/templates/thumb_interview.svg",
+    "preview_url": "",
+    "description": "눈 깜빡임과 가벼운 미소가 포함된 자연스러운 근접 인물 클립"
+  },
+  {
+    "id": "tpl_vlog_03",
+    "title": "야외 일상 브이로그 (야외 채광)",
+    "duration_sec": 4.8,
+    "thumbnail_url": "/templates/thumb_vlog.svg",
+    "preview_url": "",
+    "description": "자연광 조명과 약간의 카메라 움직임이 있는 현실적인 브이로그 클립"
+  },
+  {
+    "id": "tpl_speech_04",
+    "title": "강연 발표 장면 (동적 모션)",
+    "duration_sec": 3.5,
+    "thumbnail_url": "/templates/thumb_speech.svg",
+    "preview_url": "",
+    "description": "고개 끄덕임과 입모양 변화가 뚜렷한 세미나 발표 영상"
+  }
+]
+
