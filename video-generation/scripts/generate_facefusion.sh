@@ -34,7 +34,7 @@ python facefusion.py headless-run \
   --face-selector-mode one \
   --face-swapper-model hyperswap_1a_256 \
   --execution-providers cuda \
-  --execution-device-ids 0 \
+  --execution-device-ids "${GEN_GPU_ID:-0}" \
   --execution-thread-count 8 \
   --output-video-encoder libx264 \
   --output-video-preset veryfast \

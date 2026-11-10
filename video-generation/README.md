@@ -1,3 +1,5 @@
+> **2026-11-10 API 연결 완료:** 기존 프론트와 GPU 합성 API의 실행·원본 영상 등록 방법은 [GPU 연결 안내](../dfvideo_modal_2/gen_server/README.md)를 참고하세요. 원본 MP4 폴더는 [templates](templates/)입니다. 아래는 기존 CLI 인수인계 기록입니다.
+
 # Fact-Trace AI — 영상 합성 모듈 인수인계 (2026-11-09)
 
 ## 1. 무엇이 준비됐나?

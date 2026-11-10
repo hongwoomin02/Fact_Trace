@@ -46,7 +46,7 @@ python fsgan/inference/swap.py \
   "$JOBDIR/source.jpg" \
   -t "$JOBDIR/target.mp4" \
   -o "$JOBDIR/output" \
-  --gpus 0 \
+  --gpus "${GEN_GPU_ID:-0}" \
   --seg_remove_mouth
 
 RESULT="$JOBDIR/output/source_target.mp4"
@@ -55,5 +55,11 @@ if [[ ! -s "$RESULT" ]]; then
   find "$JOBDIR/output" -maxdepth 1 -type f -printf '%f\n' >&2
   exit 1
 fi
-cp -- "$RESULT" "$OUTPUT"
+# FSGAN writes MPEG-4 Part 2, which browsers do not consistently support.
+# Encode the result as H.264 and preserve optional audio from the target.
+"${GEN_FFMPEG_BIN:-/usr/bin/ffmpeg}" -nostdin -y \
+  -i "$RESULT" -i "$TARGET" \
+  -map 0:v:0 -map '1:a:0?' \
+  -c:v libx264 -preset veryfast -crf 20 -pix_fmt yuv420p \
+  -c:a aac -movflags +faststart -shortest "$OUTPUT"
 printf 'FSGAN 출력 영상: %s\n' "$OUTPUT"

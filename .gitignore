@@ -1,0 +1,10 @@
+# Dependencies, build outputs and local configuration
+**/node_modules/
+**/__pycache__/
+**/.venv/
+.pytest_cache/
+**/.env*
+!**/.env.example
+**/storage/
+video-generation/templates/*.mp4
+*.log
