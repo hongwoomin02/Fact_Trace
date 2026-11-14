@@ -1757,3 +1757,5 @@ mark.text-miss {
     align-items: flex-start;
   }
 }
+/* C1/C3: 누락 또는 사건 불일치 주의 */
+.text-extraction-warning { padding: 10px 12px; margin: 10px 0; border: 1px solid #d7a24c; border-radius: 6px; color: #875410; background: #fff8eb; font-size: 0.9rem; }

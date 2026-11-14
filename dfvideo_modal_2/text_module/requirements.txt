@@ -1,0 +1,7 @@
+flask>=3.0,<4
+numpy>=1.26,<3
+torch>=2.2
+transformers>=4.45
+sentence-transformers>=3.0
+faiss-cpu>=1.8
+safetensors>=0.4

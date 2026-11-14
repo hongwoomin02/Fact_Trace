@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# AI model weights
+dfvideo_modal_2/text_module/nli_model/

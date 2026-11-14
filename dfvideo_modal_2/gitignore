@@ -53,3 +53,4 @@ frontend/.vite/
 
 # 텍스트 로컬 백엔드
 dfvideo_modal_2/text_module/
+*.safetensors

@@ -1,0 +1,12 @@
+{
+  "embedder_model": "nlpai-lab/KURE-v1",
+  "reranker_model": "dragonkue/bge-reranker-v2-m3-ko",
+  "dim": 1024,
+  "n_chunks": 9081,
+  "n_docs": 1496,
+  "rerank_candidates": 20,
+  "min_similarity": 0.3,
+  "index_type": "IndexFlatIP",
+  "normalized": true,
+  "index_unit": "chunk"
+}

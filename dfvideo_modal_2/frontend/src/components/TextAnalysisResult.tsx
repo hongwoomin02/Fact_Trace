@@ -93,6 +93,10 @@ export default function TextAnalysisResult({
       ),
   );
 
+  const numericItems = result.comps['수치'] || [];
+  const numericSourceCount = (result.claim.match(/\d{1,3}(?:,\d{3})+\s*(?:만|억|조)?\s*(?:원|명|개|건|가구|대|톤|달러|불)?|\d+(?:\.\d+)?\s*(?:억|조|만)\s*(?:원|명|개|가구|달러|불)?|\d+(?:\.\d+)?\s*[%％](?:\s*p)?|\d+(?:\.\d+)?\s*(?:명|개|건|가구|곳|개소|배|점|차례|회|종|ha|㎡|㎞|km|mg|도)/g) || []).length;
+  const unextractedCount = Math.max(0, numericSourceCount - numericItems.length);
+
   return (
     <div className="text-results">
       {/* 검색 결과 상태 */}
@@ -175,6 +179,7 @@ export default function TextAnalysisResult({
                     : '찾으려 한 항목'}
                 </div>
 
+                {unextractedCount > 0 && <p className="text-extraction-warning">추출하지 못한 항목 {unextractedCount}개 — 원문에서 직접 확인해 주세요.</p>}
                 <dl>
                   {CLAIM_KINDS.filter(
                     (kind) =>
@@ -375,6 +380,7 @@ export default function TextAnalysisResult({
                       </div>
 
                       {/* 선택 구절의 일치 항목 */}
+                      {(item.missing?.기관?.length || item.missing?.사업명?.length) ? <p className="text-extraction-warning">기관 또는 사업명이 일치하지 않습니다. 수치가 같아도 다른 사건일 수 있습니다.</p> : null}
                       {hasCheckItems && (
                         <div className="text-check">
                           <div className="text-check-title">

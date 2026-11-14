@@ -1,4 +1,4 @@
-export const CLAIM_KINDS = ['수치', '기간', '대상'] as const;
+export const CLAIM_KINDS = ['기관', '사업명', '수치', '기간', '대상'] as const;
 export type ClaimKind = (typeof CLAIM_KINDS)[number];
 export type ClaimComponents = Record<ClaimKind, string[]>;
 
