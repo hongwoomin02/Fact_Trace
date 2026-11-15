@@ -1,0 +1,63 @@
+# Python cache and local environments
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Model weights and large test inputs
+weights/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.h5
+*.onnx
+samples/
+test_inputs/
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.webm
+
+# Generated inference artifacts
+examples/v4/
+examples/v6/
+video_module_v1/examples/
+**/resp_*.json
+/cold_response.json
+/resp_*.json
+
+# IDE, OS, build artifacts
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+node_modules/
+dist/
+build/
+frontend/.vite/
+
+# Keep small measurement CSV files and version/reference JSON tracked.
+
+# 텍스트 로컬 백엔드
+dfvideo_modal_2/text_module/
+*.safetensors
+
+# AI model weights
+dfvideo_modal_2/text_module/nli_model/*.safetensors
+
+# Python cache
+__pycache__/
+*.pyc

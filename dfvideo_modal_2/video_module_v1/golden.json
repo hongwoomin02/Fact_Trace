@@ -1,0 +1,228 @@
+{
+  "v4": [
+    {
+      "video": "a3Djopy_WaU_S004568_E007299_V1.mp4",
+      "method": "REAL",
+      "label": 1,
+      "verdict": "REAL",
+      "video_margin": 11.5655,
+      "n_frames_used": 10,
+      "frame_indices": [
+        0,
+        303,
+        606,
+        910,
+        1213,
+        1517,
+        1820,
+        2124,
+        2427,
+        2731
+      ],
+      "frame_margins": [
+        12.9841,
+        10.4408,
+        12.2442,
+        11.8163,
+        13.4081,
+        12.6906,
+        11.2617,
+        12.3185,
+        10.0486,
+        8.4418
+      ],
+      "timing_ms_cpu": {
+        "decode_detect_crop": 52576,
+        "model": 5052,
+        "total": 57628
+      }
+    },
+    {
+      "video": "facefusion_a3Djopy_WaU_S004568_E007299_V1.mp4",
+      "method": "FaceFusion",
+      "label": 0,
+      "verdict": "FAKE",
+      "video_margin": -0.788,
+      "n_frames_used": 10,
+      "frame_indices": [
+        0,
+        303,
+        606,
+        910,
+        1213,
+        1517,
+        1820,
+        2124,
+        2427,
+        2731
+      ],
+      "frame_margins": [
+        5.9602,
+        2.4965,
+        -2.0209,
+        -0.2092,
+        -1.5268,
+        -2.6951,
+        -2.0214,
+        -4.9723,
+        0.7387,
+        -3.6298
+      ],
+      "timing_ms_cpu": {
+        "decode_detect_crop": 57517,
+        "model": 4638,
+        "total": 62155
+      }
+    },
+    {
+      "video": "803_f0_a3Djopy_WaU_S004568_E007299_V1.mp4",
+      "method": "FSGAN",
+      "label": 0,
+      "verdict": "FAKE",
+      "video_margin": -10.0148,
+      "n_frames_used": 10,
+      "frame_indices": [
+        0,
+        303,
+        606,
+        910,
+        1213,
+        1517,
+        1820,
+        2124,
+        2427,
+        2731
+      ],
+      "frame_margins": [
+        -10.0037,
+        -10.0611,
+        -10.1099,
+        -10.6755,
+        -11.1853,
+        -10.3416,
+        -6.4104,
+        -10.0862,
+        -11.1117,
+        -10.1622
+      ],
+      "timing_ms_cpu": {
+        "decode_detect_crop": 52508,
+        "model": 4947,
+        "total": 57455
+      }
+    }
+  ],
+  "v6": [
+    {
+      "video": "a3Djopy_WaU_S004568_E007299_V1.mp4",
+      "method": "REAL",
+      "label": 1,
+      "verdict": "REAL",
+      "video_margin": 6.396,
+      "n_frames_used": 10,
+      "frame_indices": [
+        0,
+        303,
+        606,
+        910,
+        1213,
+        1517,
+        1820,
+        2124,
+        2427,
+        2731
+      ],
+      "frame_margins": [
+        6.7495,
+        7.3763,
+        8.8311,
+        5.9339,
+        5.2792,
+        7.6072,
+        6.419,
+        3.9968,
+        6.1001,
+        5.667
+      ],
+      "timing_ms_cpu": {
+        "decode_detect_crop": 52632,
+        "model": 50660,
+        "total": 103292
+      }
+    },
+    {
+      "video": "facefusion_a3Djopy_WaU_S004568_E007299_V1.mp4",
+      "method": "FaceFusion",
+      "label": 0,
+      "verdict": "FAKE",
+      "video_margin": -6.1898,
+      "n_frames_used": 10,
+      "frame_indices": [
+        0,
+        303,
+        606,
+        910,
+        1213,
+        1517,
+        1820,
+        2124,
+        2427,
+        2731
+      ],
+      "frame_margins": [
+        -7.0876,
+        -6.2024,
+        -6.2429,
+        -8.5519,
+        -7.1859,
+        -5.4327,
+        -2.9435,
+        -3.8797,
+        -7.6601,
+        -6.7111
+      ],
+      "timing_ms_cpu": {
+        "decode_detect_crop": 57842,
+        "model": 51204,
+        "total": 109046
+      }
+    },
+    {
+      "video": "803_f0_a3Djopy_WaU_S004568_E007299_V1.mp4",
+      "method": "FSGAN",
+      "label": 0,
+      "verdict": "FAKE",
+      "video_margin": -8.2992,
+      "n_frames_used": 10,
+      "frame_indices": [
+        0,
+        303,
+        606,
+        910,
+        1213,
+        1517,
+        1820,
+        2124,
+        2427,
+        2731
+      ],
+      "frame_margins": [
+        -6.9112,
+        -8.1502,
+        -7.7742,
+        -8.9701,
+        -9.3171,
+        -8.1692,
+        -7.7419,
+        -8.4538,
+        -8.8337,
+        -8.6702
+      ],
+      "timing_ms_cpu": {
+        "decode_detect_crop": 56246,
+        "model": 54437,
+        "total": 110682
+      }
+    }
+  ]
+}

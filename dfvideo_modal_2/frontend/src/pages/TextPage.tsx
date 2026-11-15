@@ -1,37 +1,73 @@
-import { useNavigate } from 'react-router-dom';
+﻿import { useCallback, useEffect, useRef, useState } from 'react';
+import TextInput from '../components/TextInput';
+import TextAnalysisResult from '../components/TextAnalysisResult';
+import { analyzeText } from '../services/textApi';
+import type { TextAnalysisState } from '../types/text';
+
+const INITIAL_STATE: TextAnalysisState = { status: 'idle', result: null, error: null };
 
 export default function TextPage() {
-  const navigate = useNavigate();
+  const [state, setState] = useState<TextAnalysisState>(INITIAL_STATE);
+  const controller = useRef<AbortController | null>(null);
+
+  useEffect(() => () => {
+    controller.current?.abort();
+    controller.current = null;
+  }, []);
+
+  const reset = useCallback(() => {
+    controller.current?.abort();
+    controller.current = null;
+    setState(INITIAL_STATE);
+  }, []);
+
+  const run = useCallback(async (text: string) => {
+    controller.current?.abort();
+    const request = new AbortController();
+    controller.current = request;
+    setState({ status: 'loading', result: null, error: null });
+
+    try {
+      const result = await analyzeText(text, request.signal);
+      if (controller.current !== request) return;
+      setState({ status: 'done', result, error: null });
+    } catch (error) {
+      if (controller.current !== request || request.signal.aborted) return;
+      setState({
+        status: 'error',
+        result: null,
+        error: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.',
+      });
+    } finally {
+      if (controller.current === request) controller.current = null;
+    }
+  }, []);
 
   return (
     <div className="page-container text-page">
       <div className="page-header">
-        <h1 className="page-title">📰 텍스트 팩트체크</h1>
+        <h1 className="page-title">텍스트 공식자료 대조</h1>
         <p className="page-description">
-          기사나 소셜 미디어 게시글의 허위 조작 텍스트 여부를 교차 검증하는 기능입니다.
+          기사 문장과 관련 공식자료를 나란히 놓고 직접 비교합니다.
         </p>
       </div>
-
-      <div className="placeholder-panel">
-        <div className="placeholder-icon-large">🚧</div>
-        <h2 className="placeholder-heading">텍스트 모듈 연동 준비 중</h2>
-        <p className="placeholder-detail">
-          현재 텍스트 팩트체크 모델 및 전용 백엔드 API를 구축하는 단계입니다.
-          <br />
-          향후 팀원의 텍스트 분석 모듈 개발이 완료되면 이 페이지를 통해 바로 이용하실 수 있습니다.
-        </p>
-
-        <div className="placeholder-guidance">
-          <h4>💡 현재 이용 가능한 서비스</h4>
-          <p>
-            현재는 <strong>영상 딥페이크 탐지 기능</strong>이 Modal 클라우드 GPU에 배포되어 즉시 분석 가능합니다.
-          </p>
-          <button className="btn btn-primary" onClick={() => navigate('/video')}>
-            🎬 영상 딥페이크 탐지 바로가기
-          </button>
+      <TextInput onAnalyze={run} isAnalyzing={state.status === 'loading'} onReset={reset} />
+      {state.status === 'error' && (
+        <div className="error-alert-box">
+          <div className="error-alert-header"><strong>검색 실패 안내</strong></div>
+          <p className="error-alert-message">{state.error}</p>
         </div>
-      </div>
+      )}
+      {state.status === 'idle' && (
+        <div className="text-state text-idle">
+          <span className="text-status">—</span>
+          <div>
+            <strong>검색 결과 · 자동 진위 판정 아님</strong>
+            <p>문장을 입력하면 대조 가능한 관련 공식자료를 검색합니다.</p>
+          </div>
+        </div>
+      )}
+      {state.status === 'done' && <TextAnalysisResult result={state.result} />}
     </div>
   );
 }
-

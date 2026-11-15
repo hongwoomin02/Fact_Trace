@@ -1,0 +1,4 @@
+﻿run,mode,video,return_frames,health_sec,client_total_sec,http,verdict,video_margin,srv_decode_detect_crop_ms,srv_model_ms,srv_total_ms,resp_bytes,note
+1,cold,facefusion_a3Djopy_WaU_S004568_E007299_V1.mp4,true,,14.978,200,FAKE,-6.1898,3212,1316,4528,136452,
+2,cold,facefusion_a3Djopy_WaU_S004568_E007299_V1.mp4,true,,69.231,200,FAKE,-6.1898,27346,2127,29473,136454,
+3,cold,facefusion_a3Djopy_WaU_S004568_E007299_V1.mp4,true,,46.785,200,FAKE,-6.1898,16542,1529,18071,136454,

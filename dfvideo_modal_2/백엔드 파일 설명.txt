@@ -1,0 +1,41 @@
+[백엔드 파일 설명]
+
+modal_app.py
+- Modal T4 GPU 배포 및 check/examples 실행 설정
+
+predict_api.py
+- 영상 전처리, 얼굴 검출, v4/v6 추론 및 REAL/FAKE 판정 핵심 코드
+
+server.py
+- FastAPI 백엔드 서버
+- /health, /predict, /docs, 테스트 화면 제공
+
+env_check.py
+- 실행 환경과 샘플 결과가 기준값과 일치하는지 검증
+
+diag_frames.py
+- FFmpeg 버전 및 영상 프레임 해시 검증
+
+make_examples.py
+- 샘플 3편 판정 및 처리시간 측정
+
+requirements.txt
+- 필요한 Python 패키지 목록
+
+env_reference.json
+- 기준 실행환경 버전 정보
+
+golden.json
+- v4/v6 샘플 기준 판정·점수 정보
+
+weights/
+- v4/v6 모델 및 얼굴 검출 가중치
+
+samples/
+- 검증용 REAL/FSGAN/FaceFusion 영상
+
+README_인계문서.md
+- 모듈 사용법 및 인계 내용
+
+※ 해당 파일들은 실제 Modal 배포 및 검증에 사용한 최종 버전입니다.
+※ v4/v6 check 모두 PASS, 실제 웹 업로드 테스트까지 완료했습니다.
