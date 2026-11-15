@@ -1,0 +1,20 @@
+[Unit]
+Description=Fact Trace GPU synthesis API
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=pukyong
+Group=pukyong
+WorkingDirectory=/home/pukyong/FactTraceAI_gpu/dfvideo_modal_2/gen_server
+ExecStart=/home/pukyong/FactTraceAI_gpu/launch-api.sh
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+UMask=0077
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

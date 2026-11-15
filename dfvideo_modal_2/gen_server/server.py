@@ -1,6 +1,7 @@
 """GPU synthesis API. Run one Uvicorn worker on the prepared GPU server."""
 import asyncio
 import io
+import hmac
 import json
 import logging
 import os
@@ -31,6 +32,9 @@ GPU = os.getenv("GEN_GPU_ID", "0")
 TIMEOUT = int(os.getenv("GEN_TIMEOUT_SECONDS", "600"))
 TTL = int(os.getenv("GEN_TTL_SECONDS", "1800"))
 MAX_JOBS = int(os.getenv("GEN_MAX_JOBS", "4"))
+API_TOKEN = os.getenv("GEN_API_TOKEN", "")
+if API_TOKEN and len(API_TOKEN) < 32:
+    raise ValueError("GEN_API_TOKEN must contain at least 32 characters")
 jobs = {}
 tasks = {}
 logger = logging.getLogger(__name__)
@@ -144,6 +148,16 @@ app = FastAPI(title="Fact-Trace GPU Synthesis", lifespan=lifespan)
 app.add_middleware(CORSMiddleware,
     allow_origins=os.getenv("GEN_CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(","),
     allow_methods=["GET", "POST", "DELETE"], allow_headers=["Content-Type"])
+
+
+@app.middleware("http")
+async def protect_gpu_api(request, call_next):
+    if API_TOKEN and request.method != "OPTIONS":
+        provided = request.headers.get("authorization", "").encode("utf-8")
+        if not hmac.compare_digest(provided, ("Bearer " + API_TOKEN).encode("utf-8")):
+            return JSONResponse({"message": "Authentication required"}, status_code=401,
+                                headers={"WWW-Authenticate": "Bearer", "Cache-Control": "no-store"})
+    return await call_next(request)
 
 
 @app.get("/health")

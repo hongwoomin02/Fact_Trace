@@ -1,0 +1,13 @@
+{
+    admin off
+}
+
+https://112.175.148.181 {
+    tls {
+        issuer acme {
+            dir https://acme-v02.api.letsencrypt.org/directory
+            profile shortlived
+        }
+    }
+    reverse_proxy 127.0.0.1:8002
+}

@@ -8,3 +8,4 @@
 **/storage/
 video-generation/templates/*.mp4
 *.log
+.vercel

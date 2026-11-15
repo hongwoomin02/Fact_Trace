@@ -1,0 +1,13 @@
+**/node_modules/**
+**/.venv/**
+**/storage/**
+**/__pycache__/**
+**/.pytest_cache/**
+**/.env*
+**/*.mp4
+**/*.pt
+**/*.h5
+**/*.safetensors
+**/nli_model/**
+.git/**
+.vercel/**

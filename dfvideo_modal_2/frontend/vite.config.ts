@@ -22,6 +22,7 @@ export default defineConfig(({ mode }) => {
         '/api/generate': {
           target: env.GEN_API_ORIGIN || 'http://127.0.0.1:8002',
           changeOrigin: true,
+          headers: env.GEN_API_TOKEN ? { Authorization: `Bearer ${env.GEN_API_TOKEN}` } : undefined,
           rewrite: (path) => path.replace(/^\/api\/generate/, ''),
         },
         '/api/video': {

@@ -13,6 +13,7 @@ import server
 
 @pytest.fixture
 def client(tmp_path, monkeypatch):
+    monkeypatch.setattr(server, "API_TOKEN", "")
     monkeypatch.setattr(server, "TEMPLATES_DIR", tmp_path / "templates")
     monkeypatch.setattr(server, "STORAGE_DIR", tmp_path / "jobs")
     server.TEMPLATES_DIR.mkdir()
@@ -143,3 +144,20 @@ def test_completed_job_survives_restart_until_expiry(client):
     assert client.get("/jobs/job_preserved/result").content == b"existing result"
     assert client.delete("/jobs/job_preserved").status_code == 204
     assert not directory.exists()
+
+
+def test_authenticated_gateway_rejects_direct_calls(client, monkeypatch):
+    token = "test-service-token-" + "x" * 32
+    monkeypatch.setattr(server, "API_TOKEN", token)
+    assert client.get("/templates").status_code == 401
+    assert client.post("/jobs").status_code == 401
+    assert client.get("/templates", headers={"Authorization": "Bearer wrong"}).status_code == 401
+    assert client.get("/templates", headers={"Authorization": "Bearer " + token}).status_code == 200
+    assert not server.jobs
+
+
+def test_no_hourly_submission_limit(client):
+    # Invalid requests avoid running a model while checking repeated admission.
+    for _ in range(20):
+        assert client.post("/jobs").status_code == 422
+    assert not server.jobs
