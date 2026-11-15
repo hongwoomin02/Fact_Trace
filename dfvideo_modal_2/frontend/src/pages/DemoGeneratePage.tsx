@@ -651,9 +651,9 @@ export default function DemoGeneratePage() {
             <legend>합성 방식 선택</legend>
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
               {(['facefusion', 'fsgan'] as const).map((model) => (
-                <label key={model} className="btn btn-secondary" style={{ cursor: 'pointer', outline: selectedModel === model ? '2px solid #818cf8' : undefined }}>
-                  <input type="radio" name="synthesis-model" value={model} checked={selectedModel === model} onChange={() => setSelectedModel(model)} />
-                  {model === 'facefusion' ? 'FaceFusion' : 'FSGAN'}
+                <label key={model} className="btn btn-secondary" style={{ cursor: model === 'fsgan' ? 'not-allowed' : 'pointer', opacity: model === 'fsgan' ? 0.5 : 1, outline: selectedModel === model ? '2px solid #818cf8' : undefined }}>
+                  <input type="radio" name="synthesis-model" value={model} checked={selectedModel === model} disabled={model === 'fsgan'} onChange={() => { if (model === 'facefusion') setSelectedModel(model); }} />
+                  {model === 'facefusion' ? 'FaceFusion' : 'FSGAN (비활성화)'}
                 </label>
               ))}
             </div>

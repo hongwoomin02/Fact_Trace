@@ -4,18 +4,17 @@ import FrameGallery from './FrameGallery';
 
 interface Props {
   result: VideoPredictResponse;
-  elapsedMs: number;
 }
 
-export default function VideoAnalysisResult({ result, elapsedMs }: Props) {
+export default function VideoAnalysisResult({ result }: Props) {
   const verdictTextMap: Record<string, { label: string; desc: string; className: string }> = {
     REAL: {
-      label: '진본 영상 (REAL)',
+      label: 'REAL',
       desc: '얼굴 조작(딥페이크) 특징이 감지되지 않았습니다.',
       className: 'verdict-badge--real',
     },
     FAKE: {
-      label: '조작 의심 영상 (FAKE)',
+      label: 'FAKE',
       desc: '얼굴 영역에서 딥페이크 합성 패턴이 감지되었습니다.',
       className: 'verdict-badge--fake',
     },
@@ -53,7 +52,7 @@ export default function VideoAnalysisResult({ result, elapsedMs }: Props) {
             </span>
             {!isUnknown && manipulationScore !== null && (
               <span className={`score-badge ${isFake ? 'score-badge--fake' : 'score-badge--real'}`}>
-                {isFake ? '조작 의심' : '진본 유사'}
+                {isFake ? 'FAKE' : 'REAL'}
               </span>
             )}
           </div>
@@ -67,9 +66,9 @@ export default function VideoAnalysisResult({ result, elapsedMs }: Props) {
                 />
               </div>
               <div className="gauge-labels">
-                <span>0 (진본)</span>
+                <span>0 (REAL)</span>
                 <span className="gauge-threshold">기준 50</span>
-                <span>100 (조작 의심)</span>
+                <span>100 (FAKE)</span>
               </div>
             </div>
           ) : (
@@ -107,34 +106,6 @@ export default function VideoAnalysisResult({ result, elapsedMs }: Props) {
           </span>
         </div>
 
-        {/* 카드 4: 소요 시간 비교 */}
-        <div className="metric-card">
-          <span className="metric-label">소요 시간 비교</span>
-          <div className="time-comparison">
-            <div>
-              <span className="time-sub-label">서버 내부 연산:</span>
-              <strong className="time-sub-val">{result.timing_ms.total.toLocaleString()} ms</strong>
-            </div>
-            <div>
-              <span className="time-sub-label">브라우저 전체 왕복:</span>
-              <strong className="time-sub-val">{elapsedMs.toLocaleString()} ms</strong>
-            </div>
-          </div>
-          <span className="metric-hint">
-            브라우저 시간은 영상 업로드 + 네트워크 왕복이 포함되어 서버 시간보다 깁니다.
-          </span>
-        </div>
-
-        {/* 카드 5: 탐지 모델 정보 */}
-        <div className="metric-card">
-          <span className="metric-label">탐지 모델 정보</span>
-          <span className="metric-value">
-            {result.model} ({result.n_seeds}개 시드 앙상블)
-          </span>
-          <span className="metric-hint">
-            디바이스: {result.device} · API v{result.api_version}
-          </span>
-        </div>
       </div>
 
       {/* 3. 경고 메시지 섹션 */}

@@ -78,8 +78,8 @@ export default function VideoPage() {
       <div className="page-header">
         <h1 className="page-title">🎬 영상 딥페이크 탐지</h1>
         <p className="page-description">
-          영상을 업로드하면 AI가 10개 프레임에서 얼굴 영역을 추출하고,
-          v6 앙상블 신경망을 통해 딥페이크 여부(REAL / FAKE)를 정밀 분석합니다.
+          <span>AI가 영상의 10개 프레임에서 얼굴 영역을 추출합니다.</span>
+          <span>추출한 얼굴을 분석해 REAL / FAKE를 판정합니다.</span>
         </p>
       </div>
 
@@ -132,7 +132,7 @@ export default function VideoPage() {
 
       {/* 분석 결과 컴포넌트 */}
       {state.status === 'done' && state.result && state.elapsedMs !== null && (
-        <VideoAnalysisResult result={state.result} elapsedMs={state.elapsedMs} />
+        <VideoAnalysisResult result={state.result} />
       )}
     </div>
   );

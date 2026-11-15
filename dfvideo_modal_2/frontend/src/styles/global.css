@@ -180,6 +180,23 @@ body {
   margin: 0 auto;
 }
 
+.video-page .page-description {
+  max-width: 760px;
+  line-height: 1.7;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+
+.video-page .page-description > span {
+  display: block;
+}
+
+.video-page .page-title {
+  word-break: keep-all;
+  text-wrap: balance;
+}
+
 /* --------------------------------------------------------------------------
    Buttons & Badges
    -------------------------------------------------------------------------- */
@@ -561,7 +578,7 @@ body {
 
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
   margin-bottom: 28px;
 }
@@ -573,6 +590,10 @@ body {
   padding: 16px;
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  gap: 8px;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 .metric-label {
@@ -590,10 +611,16 @@ body {
 }
 
 .metric-hint {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text-muted);
-  line-height: 1.4;
+  line-height: 1.6;
   margin-top: auto;
+}
+
+@media (max-width: 860px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .time-comparison {
@@ -3019,6 +3046,7 @@ mark.text-miss {
 
 .score-display-wrapper {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   margin-bottom: 10px;

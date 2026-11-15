@@ -68,9 +68,9 @@ export default function FrameGallery({ frames }: Props) {
                     className={`frame-verdict frame-verdict--${frame.verdict || 'none'}`}
                   >
                     {frame.verdict === 'FAKE'
-                      ? '조작(FAKE)'
+                      ? 'FAKE'
                       : frame.verdict === 'REAL'
-                      ? '진본(REAL)'
+                      ? 'REAL'
                       : '판정 불가'}
                   </span>
                 </div>

@@ -34,7 +34,7 @@ export default function HomePage() {
             </div>
             <h3 className="card-title">영상 딥페이크 탐지</h3>
             <p className="card-desc">
-              동영상을 업로드하면 RetinaFace 얼굴 검출과 CLIP/ConvNeXt 기반 앙상블 신경망을 통해 10개 프레임의 합성 여부(REAL / FAKE)를 정밀 분석합니다.
+              동영상을 업로드하면 RetinaFace를 통해 얼굴을 검출하고, CLIP ViT-L/14 기반의 3개 모델 앙상블을 활용하여 최대 10개 프레임의 합성 여부(REAL / FAKE)를 분석합니다.
             </p>
             <div className="card-footer">
               <span className="btn-link">영상 탐지 시작하기 →</span>
@@ -74,7 +74,7 @@ export default function HomePage() {
             </div>
             <h3 className="card-title">FaceFusion 영상 생성</h3>
             <p className="card-desc">
-              [체험용 독립 스튜디오] 방문객 얼굴 사진과 3~5초 원본 영상을 조합하여 글로벌호스트 RTX 4090 GPU로 딥페이크를 즉석 합성하고 탐지해 봅니다.
+              방문객 얼굴 사진과 원본 영상을 조합하여 글로벌호스트 RTX 3090 GPU로 딥페이크를 즉석 합성해 봅니다.
             </p>
             <div className="card-footer">
               <span className="btn-link btn-link--demo">시연 스튜디오 가기 →</span>
@@ -83,71 +83,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 3. 발표 시연 가이드 인포그래픽 섹션 */}
-      <section className="demo-flow-section">
-        <div className="demo-flow-card">
-          <div className="demo-flow-header">
-            <span className="demo-flow-pill">캡스톤 발표 시연 흐름</span>
-            <h3>방문객 딥페이크 체험 & 즉시 검증 시연 순서</h3>
-            <p>생성 서버는 발표 체험용 별도 페이지이며, 합성된 영상을 Fact-Trace AI 탐지 플랫폼으로 바로 연계 검증합니다.</p>
-          </div>
-
-          <div className="demo-flow-grid">
-            <div className="demo-flow-item">
-              <span className="step-circle">1</span>
-              <h4>얼굴 사진 촬영</h4>
-              <p>방문객 본인 얼굴 사진 촬영 또는 준비된 인물 사진 선택</p>
-            </div>
-            <div className="flow-chevron">→</div>
-            <div className="demo-flow-item">
-              <span className="step-circle">2</span>
-              <h4>사진 업로드</h4>
-              <p>생성 스튜디오 페이지에 방문객 얼굴 사진 업로드</p>
-            </div>
-            <div className="flow-chevron">→</div>
-            <div className="demo-flow-item">
-              <span className="step-circle">3</span>
-              <h4>3~5초 원본 선택</h4>
-              <p>뉴스, 인터뷰 등 미리 준비된 고화질 원본 영상 선택</p>
-            </div>
-            <div className="flow-chevron">→</div>
-            <div className="demo-flow-item">
-              <span className="step-circle">4</span>
-              <h4>FaceFusion 합성</h4>
-              <p>글로벌호스트 RTX 4090 GPU에서 심층 인스왑 합성 실행</p>
-            </div>
-            <div className="flow-chevron">→</div>
-            <div className="demo-flow-item">
-              <span className="step-circle">5</span>
-              <h4>MP4 다운로드</h4>
-              <p>완성된 고화질 딥페이크 MP4 파일 즉시 다운로드</p>
-            </div>
-            <div className="flow-chevron">→</div>
-            <div className="demo-flow-item highlight">
-              <span className="step-circle highlight">6</span>
-              <h4>Fact-Trace 검증</h4>
-              <p>완성 영상을 탐지 플랫폼에 업로드하여 FAKE 판정 즉시 확인!</p>
-            </div>
-          </div>
-
-          <div className="demo-flow-action">
-            <button className="btn btn-primary" onClick={() => navigate('/demo/generate')}>
-              🚀 발표 시연용 영상 생성 스튜디오 열기
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* 4. 시스템 스펙 안내 섹션 */}
-      <section className="info-banner-section">
-        <div className="info-banner">
-          <h4>💡 백엔드 시스템 인프라 구성</h4>
-          <p>
-            <strong>탐지 플랫폼 (Fact-Trace AI):</strong> Modal 클라우드 T4 GPU 기반 v6 앙상블 신경망 배포 완료<br />
-            <strong>생성 시연 스튜디오:</strong> 글로벌호스트 NVIDIA RTX 4090 서버 기반 FaceFusion 파이프라인 연계
-          </p>
-        </div>
-      </section>
     </div>
   );
 }
