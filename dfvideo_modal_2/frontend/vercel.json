@@ -2,6 +2,10 @@
   "installCommand": "npm ci",
   "rewrites": [
     {
+      "source": "/api/text/:path*",
+      "destination": "https://ykm20651--factrace-text-service-web.us-east.modal.run/api/:path*"
+    },
+    {
       "source": "/api/video/:path*",
       "destination": "https://goyeas52--dfvideo-web.us-east.modal.run/:path*"
     },

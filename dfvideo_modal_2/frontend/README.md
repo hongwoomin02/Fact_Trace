@@ -92,13 +92,13 @@ npm run build
 
 ---
 
-## 4. 향후 텍스트 모듈 개발자를 위한 안내
+## 4. 텍스트 API 연동
 
-- `src/pages/TextPage.tsx`는 향후 텍스트 팩트체크 모듈 연동을 위한 전용 페이지입니다.
-- 텍스트 API가 준비되면:
-  1. `src/types/text.ts` 생성
-  2. `src/services/textApi.ts` 생성
-  3. `src/pages/TextPage.tsx`에 입력 폼 및 결과 컴포넌트를 연결하시면 됩니다.
+- 브라우저는 `POST /api/text/predict`로 `{ "sentence": "검증할 문장" }`을 전송합니다. `VITE_TEXT_API_BASE_URL`의 기본값은 `/api/text`입니다.
+- 로컬 개발에서는 `vite.config.ts`가 `/api/text/*`를 `TEXT_API_ORIGIN`의 `/api/*`로 전달합니다.
+- Vercel에서는 `vercel.json`의 rewrite가 `/api/text/*`를 `https://ykm20651--factrace-text-service-web.us-east.modal.run/api/*`로 전달합니다. 백엔드의 실제 분석 경로는 `/api/predict`입니다.
+- Vite 프록시는 Vercel에서 실행되지 않습니다. 배포 설정에서 텍스트 rewrite가 빠지면 `/api/text/predict` 요청이 404로 실패합니다. 설정 변경 후에는 프론트엔드를 재배포해야 합니다.
+- Modal 주소가 바뀌면 로컬의 `TEXT_API_ORIGIN`과 `vercel.json`의 텍스트 destination을 함께 수정합니다. Vercel 환경변수에 `TEXT_API_ORIGIN`만 추가해도 정적 rewrite의 주소가 바뀌지는 않습니다.
 
 ---
 
