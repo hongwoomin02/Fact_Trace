@@ -29,8 +29,9 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 # ============================================================
 
 BASE = Path(__file__).resolve().parent
-ENGINE_DIR = BASE / "search_engine_v2"
-MODEL_DIR = BASE / "nli_model"
+
+# ENGINE_DIR / MODEL_DIR 는 로깅 설정 뒤에서 결정한다.
+# 로컬에서는 app.py 옆 폴더, Modal 에서는 볼륨을 쓴다.
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -89,6 +90,102 @@ def log_step(name: str, started: float):
     elapsed = time.perf_counter() - started
     logger.info("[TIMING] %s: %.3f초", name, elapsed)
     return elapsed
+
+
+# ============================================================
+# 모델·색인 폴더 위치
+#
+# 로컬에서는 app.py 옆에 search_engine_v2 와 nli_model 이 있다.
+# Modal 에서는 app.py 가 /root 에 올라가고 두 폴더는
+# 볼륨으로 다른 지점에 붙으므로, 후보 경로를 차례로 확인한다.
+#
+# 환경변수 ENGINE_DIR / MODEL_DIR 을 주면 그것을 먼저 쓴다.
+# ============================================================
+
+_DIR_CANDIDATE_ROOTS = [
+    "/",
+    "/models",
+    "/vol",
+    "/volume",
+    "/data",
+    "/cache",
+    "/mnt",
+    "/root",
+]
+
+
+def _resolve_dir(name: str, env_key: str) -> Path:
+
+    candidates: list[Path] = []
+
+    override = os.getenv(env_key)
+    if override:
+        candidates.append(Path(override))
+
+    # 로컬 실행
+    candidates.append(BASE / name)
+
+    # Modal 볼륨
+    for root in _DIR_CANDIDATE_ROOTS:
+        candidates.append(Path(root) / name)
+
+    seen = set()
+
+    for path in candidates:
+
+        key = str(path)
+
+        if key in seen:
+            continue
+
+        seen.add(key)
+
+        if path.exists():
+            logger.info(
+                "[INIT] %s 경로 확인: %s",
+                name,
+                path,
+            )
+            return path
+
+    # 못 찾은 경우, 찾아본 경로와 실제 디렉터리 목록을 남긴다.
+    logger.error(
+        "[INIT] %s 폴더를 찾지 못했습니다. 확인한 경로: %s",
+        name,
+        [str(c) for c in candidates],
+    )
+
+    for root in ["/", "/root"]:
+        try:
+            entries = sorted(
+                p.name for p in Path(root).iterdir()
+            )
+            logger.error(
+                "[INIT] %s 아래 항목: %s",
+                root,
+                entries,
+            )
+        except Exception as exc:
+            logger.error(
+                "[INIT] %s 목록 조회 실패: %s",
+                root,
+                exc,
+            )
+
+    # 원래 동작대로 로컬 경로를 돌려준다.
+    # 실제 오류는 Pipeline.__init__ 에서 발생한다.
+    return BASE / name
+
+
+ENGINE_DIR = _resolve_dir(
+    "search_engine_v2",
+    "ENGINE_DIR",
+)
+
+MODEL_DIR = _resolve_dir(
+    "nli_model",
+    "MODEL_DIR",
+)
 
 
 # ============================================================
