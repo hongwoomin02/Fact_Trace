@@ -882,7 +882,43 @@ body {
 /* Text Page */
 
 .text-page {
-  max-width: 1180px;
+  --primary: #5459e8;
+  --primary-hover: #454bd2;
+  --primary-light: #eeedff;
+  --text-primary: #20243c;
+  --text-muted: #70768c;
+  --border-color: #e4e3ef;
+  --radius-md: 16px;
+  --shadow-sm: 0 4px 18px rgba(48, 42, 105, 0.045);
+  max-width: 1280px;
+  color: var(--text-primary);
+}
+
+.main-content:has(> .text-page) {
+  background: linear-gradient(180deg, #f4f2ff 0%, #f8f7fd 100%);
+}
+
+.text-page .page-header {
+  margin-bottom: 24px;
+}
+
+.text-page .page-title {
+  font-size: clamp(26px, 2.5vw, 34px);
+  letter-spacing: -0.035em;
+}
+
+.text-page .page-description {
+  max-width: none;
+  line-height: 1.7;
+}
+
+.text-page .text-input-row > .btn {
+  border-radius: 10px;
+}
+
+.text-page .text-samples button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
 }
 
 
@@ -906,9 +942,9 @@ body {
    텍스트 입력 영역
    ========================================================= */
 
-.text-input-panel {
-  padding: 20px;
-  margin-bottom: 18px;
+.text-page .text-input-panel {
+  padding: 24px;
+  margin-bottom: 24px;
 }
 
 .text-input-panel > label {
@@ -929,7 +965,7 @@ body {
   min-width: 0;
 }
 
-.text-field-wrap textarea {
+.text-page .text-field-wrap textarea {
   display: block;
   width: 100%;
 
@@ -940,7 +976,7 @@ body {
   resize: none;
 
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
+  border-radius: 10px;
 
   padding: 12px 42px 12px 14px;
 
@@ -997,23 +1033,31 @@ body {
    샘플 버튼
    ========================================================= */
 
-.text-samples {
-  display: flex;
-  flex-wrap: wrap;
+.text-page .text-samples {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 
-  gap: 7px;
+  gap: 12px;
 
-  margin-top: 12px;
+  margin-top: 20px;
 }
 
-.text-samples button {
+.text-page .text-samples button {
   border: 1px solid var(--border-color);
 
   background: #fff;
 
-  border-radius: 999px;
+  border-radius: 10px;
 
-  padding: 6px 10px;
+  min-width: 0;
+  min-height: 48px;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+  word-break: keep-all;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 
   color: var(--text-muted);
 
@@ -1025,8 +1069,9 @@ body {
   color: var(--primary);
 }
 
-.text-samples button.active {
+.text-page .text-samples button.active {
   border-color: var(--primary);
+  font-weight: 600;
 
   color: var(--primary);
 
@@ -1043,14 +1088,14 @@ body {
    검색 결과 상태
    ========================================================= */
 
-.text-state {
+.text-page .text-state {
   display: flex;
 
   gap: 16px;
 
-  padding: 18px;
+  padding: 20px 24px;
 
-  margin: 18px 0;
+  margin: 0 0 24px;
 }
 
 .text-state p {
@@ -1095,14 +1140,14 @@ body {
    입력한 주장 + 관련 자료
    ========================================================= */
 
-.text-columns {
+.text-page .text-columns {
   display: grid;
 
   grid-template-columns:
     minmax(0, 0.9fr)
     minmax(0, 1.35fr);
 
-  gap: 22px;
+  gap: 24px;
 
   align-items: start;
 }
@@ -1127,8 +1172,8 @@ body {
    공통 결과 패널
    ========================================================= */
 
-.text-panel {
-  padding: 18px;
+.text-page .text-panel {
+  padding: 24px;
 }
 
 
@@ -1140,11 +1185,11 @@ body {
   min-width: 0;
 }
 
-.text-claim-content {
+.text-page .text-claim-content {
   color: var(--text-primary);
 
   font-size: 16px;
-  line-height: 1.9;
+  line-height: 1.85;
 
   overflow-wrap: anywhere;
   word-break: keep-all;
@@ -1338,11 +1383,10 @@ mark.text-miss {
 
 /* 현재 선택한 관련 자료 */
 
-.text-evidence-card.selected {
+.text-page .text-evidence-card.selected {
   border-color: var(--primary);
 
-  outline: 2px solid #bfdbfe;
-  outline-offset: 0;
+  box-shadow: 0 0 0 1px rgba(84, 89, 232, 0.08), var(--shadow-sm);
 }
 
 
@@ -1350,14 +1394,14 @@ mark.text-miss {
    관련 자료 카드 상단
    ========================================================= */
 
-.text-card-top {
+.text-page .text-card-top {
   position: relative;
 
   display: block;
 
   width: 100%;
 
-  padding: 16px;
+  padding: 24px;
 
   border: 0;
 
@@ -1512,8 +1556,8 @@ mark.text-miss {
    주장과 대조할 원문 구절
    ========================================================= */
 
-.text-quote-section {
-  padding: 15px;
+.text-page .text-quote-section {
+  padding: 20px 24px 24px;
 
   border-top: 1px solid var(--border-color);
 }
@@ -1738,6 +1782,23 @@ mark.text-miss {
    ========================================================= */
 
 @media (max-width: 760px) {
+  .text-page {
+    padding: 24px 16px;
+  }
+
+  .text-page .text-samples {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .text-page .text-input-panel,
+  .text-page .text-panel,
+  .text-page .text-state,
+  .text-page .text-card-top,
+  .text-page .text-quote-section {
+    padding: 18px;
+  }
+
   .text-input-row {
     flex-direction: column;
   }
@@ -1746,7 +1807,7 @@ mark.text-miss {
     align-self: stretch;
   }
 
-  .text-columns {
+  .text-page .text-columns {
     grid-template-columns: 1fr;
 
     gap: 18px;
@@ -1756,7 +1817,7 @@ mark.text-miss {
     flex-direction: column;
   }
 
-  .text-claim-content {
+  .text-page .text-claim-content {
     font-size: 15px;
   }
 
