@@ -145,89 +145,82 @@ def log_step(name: str, started: float):
 # ============================================================
 
 _DIR_CANDIDATE_ROOTS = [
-    "/",
-    "/models",
-    "/vol",
-    "/volume",
-    "/data",
-    "/cache",
-    "/mnt",
-    "/root",
+    BASE,
+    Path("/models"),
+    Path("/vol"),
+    Path("/volume"),
+    Path("/data"),
+    Path("/cache"),
+    Path("/mnt"),
+    Path("/root"),
+    Path("/"),
 ]
 
 
+def _has_required_files(path: Path, name: str) -> bool:
+    """디렉터리 이름뿐 아니라 실제 모델/색인 파일의 존재를 확인한다."""
+    if not path.is_dir():
+        return False
+    if name == "search_engine_v2":
+        required = ("engine_config.json", "engine_meta.pkl", "faiss_index.bin")
+    elif name == "nli_model":
+        required = ("config.json",)
+    else:
+        return False
+    return all((path / filename).is_file() for filename in required)
+
+
 def _resolve_dir(name: str, env_key: str) -> Path:
+    """로컬 및 Modal 볼륨의 다양한 마운트 구조를 지원한다.
+
+    ENGINE_DIR / MODEL_DIR 환경변수가 있으면 해당 경로를 우선 사용하며,
+    잘못 설정된 경우 다른 디렉터리로 조용히 대체하지 않는다.
+    """
+    override = os.getenv(env_key, "").strip()
+    if override:
+        specified = Path(override).expanduser()
+        if not _has_required_files(specified, name):
+            raise FileNotFoundError(
+                f"{env_key}={specified}에 {name} 필수 파일이 없습니다. "
+                "Modal 볼륨 마운트 경로와 파일 구성을 확인하세요."
+            )
+        logger.info("[INIT] %s 환경변수 경로 사용: %s", name, specified)
+        return specified
 
     candidates: list[Path] = []
-
-    override = os.getenv(env_key)
-    if override:
-        candidates.append(Path(override))
-
-    # 로컬 실행
-    candidates.append(BASE / name)
-
-    # Modal 볼륨
     for root in _DIR_CANDIDATE_ROOTS:
-        candidates.append(Path(root) / name)
+        # 볼륨을 /models/search_engine_v2처럼 마운트한 경우와
+        # /models에 search_engine_v2의 내용물을 직접 마운트한 경우 모두 지원.
+        candidates.extend((root / name, root))
+        # /data/factcheck/search_engine_v2 등의 한 단계 중첩 구조 지원.
+        # 루트(/)는 광범위한 디렉터리 순회를 피하기 위해 제외.
+        if root != Path("/") and root.is_dir():
+            try:
+                for child in root.iterdir():
+                    if child.is_dir():
+                        candidates.extend((child / name, child))
+            except OSError as exc:
+                logger.warning("[INIT] %s 목록 조회 실패: %s", root, exc)
 
-    seen = set()
-
+    seen: set[str] = set()
     for path in candidates:
-
         key = str(path)
-
         if key in seen:
             continue
-
         seen.add(key)
-
-        if path.exists():
-            logger.info(
-                "[INIT] %s 경로 확인: %s",
-                name,
-                path,
-            )
+        if _has_required_files(path, name):
+            logger.info("[INIT] %s 필수 파일 확인: %s", name, path)
             return path
 
-    # 못 찾은 경우, 찾아본 경로와 실제 디렉터리 목록을 남긴다.
-    logger.error(
-        "[INIT] %s 폴더를 찾지 못했습니다. 확인한 경로: %s",
-        name,
-        [str(c) for c in candidates],
+    raise FileNotFoundError(
+        f"{name} 필수 파일을 찾지 못했습니다. 확인한 경로: "
+        f"{list(seen)}. Modal에서 {env_key} 환경변수에 실제 "
+        "볼륨 마운트 디렉터리를 지정하세요."
     )
 
-    for root in ["/", "/root"]:
-        try:
-            entries = sorted(
-                p.name for p in Path(root).iterdir()
-            )
-            logger.error(
-                "[INIT] %s 아래 항목: %s",
-                root,
-                entries,
-            )
-        except Exception as exc:
-            logger.error(
-                "[INIT] %s 목록 조회 실패: %s",
-                root,
-                exc,
-            )
 
-    # 원래 동작대로 로컬 경로를 돌려준다.
-    # 실제 오류는 Pipeline.__init__ 에서 발생한다.
-    return BASE / name
-
-
-ENGINE_DIR = _resolve_dir(
-    "search_engine_v2",
-    "ENGINE_DIR",
-)
-
-MODEL_DIR = _resolve_dir(
-    "nli_model",
-    "MODEL_DIR",
-)
+ENGINE_DIR = _resolve_dir("search_engine_v2", "ENGINE_DIR")
+MODEL_DIR = _resolve_dir("nli_model", "MODEL_DIR")
 
 
 # ============================================================
