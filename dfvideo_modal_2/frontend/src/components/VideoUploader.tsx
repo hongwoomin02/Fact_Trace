@@ -39,10 +39,6 @@ export default function VideoUploader({ onAnalyze, onCancel, isAnalyzing, onRese
         alert('선택한 영상 파일의 크기가 0바이트(빈 파일)입니다. 정상적인 영상 파일을 선택해 주세요.');
         return;
       }
-      if (file && file.size > 50 * 1024 * 1024) {
-        alert('영상 크기는 50MB 이하여야 합니다.');
-        return;
-      }
       onReset();
 
       setSelectedFile(file);
@@ -140,7 +136,7 @@ export default function VideoUploader({ onAnalyze, onCancel, isAnalyzing, onRese
           <p className="drop-secondary-text">
             {selectedFile
               ? `크기: ${formatFileSize(selectedFile.size)} · 다른 파일을 선택하려면 클릭`
-              : 'MP4, MOV, WEBM 등의 영상 파일 지원 (최대 50MB)'}
+              : 'MP4, MOV, WEBM 등의 영상 파일 지원'}
           </p>
         </div>
       </div>
