@@ -24,6 +24,48 @@ from sentence_transformers import SentenceTransformer, CrossEncoder
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
 
+# 기관명 검색 확장: DB source 기반. 검토용/모호한 별칭은 자동 확장에서 제외.
+# 사전 파일은 이 app.py와 같은 디렉터리에 배치한다.
+def _load_agency_aliases():
+    path = Path(__file__).resolve().parent / "agency_aliases.json"
+    try:
+        with path.open(encoding="utf-8") as file:
+            return json.load(file)
+    except (OSError, ValueError) as exc:
+        logging.getLogger("factcheck").warning("기관 약칭 사전 로드 실패: %s", exc)
+        return []
+
+AGENCY_ALIAS_DATA = _load_agency_aliases()
+
+
+def expand_agency_query(sentence: str) -> str | None:
+    """기관명과 등록 약칭을 양방향 확장한다. 원문 검색은 항상 병행한다.
+
+    한 문장에 기관명 여러 개가 있으면 중복 치환을 피하고, 가장 긴 명칭부터
+    하나씩 변환한다. 개편 전후 기관을 자동으로 동일 기관이라고 판정하지 않는다.
+    """
+    candidates = []
+    for row in AGENCY_ALIAS_DATA:
+        source = row["source"]
+        aliases = [a for a in row.get("aliases", []) if len(a) >= 3]
+        for alias in aliases:
+            candidates.append((alias, source))
+        if aliases:
+            # 정식 명칭으로 입력해도 자료의 약칭을 찾을 수 있게 역방향 확장.
+            candidates.append((source, aliases[0]))
+
+    # '산업통상부'는 기존 DB source '산업통상자원부'와 다른 명칭이다.
+    # 여기서는 검색어만 확장하며 기관 개편 관계를 자동 판정하지 않는다.
+    candidates.append(("산업통상부", "산업부"))
+    candidates.sort(key=lambda pair: len(pair[0]), reverse=True)
+    for original, replacement in candidates:
+        pattern = rf"(?<![가-힣A-Za-z]){re.escape(original)}(?=(?:은|는|이|가|을|를|의|에|에서|와|과|도|만|로|으로|에게|께|부터|까지)?(?:[^가-힣A-Za-z]|$))"
+        changed, count = re.subn(pattern, replacement, sentence)
+        if count and changed != sentence:
+            return changed
+    return None
+
+
 # ============================================================
 # 기본 설정
 # ============================================================
@@ -711,11 +753,15 @@ class Pipeline:
 
         logger.info("[SEARCH] 임베딩 시작")
 
+        expanded_query = expand_agency_query(query)
+        queries = [query] + ([expanded_query] if expanded_query else [])
         qv = self.embedder.encode(
-            [query],
+            queries,
             normalize_embeddings=True,
             convert_to_numpy=True,
         ).astype("float32")
+        if expanded_query:
+            logger.info("[SEARCH] 기관 약칭 확장 검색 사용 (원문 검색 병행)")
 
         log_step("쿼리 임베딩", started)
 
@@ -734,28 +780,27 @@ class Pipeline:
 
         log_step("FAISS 검색", t)
 
-        cands = []
-
-        for dense, idx in zip(
-            scores[0],
-            idxs[0],
-        ):
-
-            if idx < 0:
-                continue
-
-            m = dict(
-                self.chunk_meta[int(idx)]
-            )
-
-            cands.append({
-                **m,
-                "chunk_idx": int(idx),
-                "dense_score": float(dense),
-                "chunk_text": (
-                    self.chunk_texts[int(idx)]
-                ),
-            })
+        # 원문/확장 쿼리의 검색 후보를 합치되, 중복 청크는 최대 유사도로 유지.
+        # 사전에 없는 기관명은 확장하지 않으며 불일치 판정의 근거로 삼지 않는다.
+        candidate_by_idx = {}
+        for score_row, idx_row in zip(scores, idxs):
+            for dense, idx in zip(score_row, idx_row):
+                if idx < 0:
+                    continue
+                idx = int(idx)
+                if idx in candidate_by_idx:
+                    candidate_by_idx[idx]["dense_score"] = max(
+                        candidate_by_idx[idx]["dense_score"], float(dense)
+                    )
+                    continue
+                m = dict(self.chunk_meta[idx])
+                candidate_by_idx[idx] = {
+                    **m,
+                    "chunk_idx": idx,
+                    "dense_score": float(dense),
+                    "chunk_text": self.chunk_texts[idx],
+                }
+        cands = list(candidate_by_idx.values())
 
         if self.reranker and cands:
 

@@ -9,8 +9,70 @@ import {
 
 const API_TIMEOUT_MS = 60_000;
 
-export const NUM =
-  /\d{1,3}(?:,\d{3})+\s*(?:만|억|조)?\s*(?:원|명|개|건|가구|대|톤|달러|불)?|\d+(?:\.\d+)?\s*(?:억|조|만)\s*(?:원|명|개|가구|달러|불)?|\d+(?:\.\d+)?\s*[%％](?:\s*p)?|\d+(?:\.\d+)?\s*(?:명|개|건|가구|곳|개소|배|점|차례|회|종|ha|㎡|㎞|km|mg|도)/g;
+// 금액 범위와 기간 길이를 별도 수치 항목으로 보존한다.
+// 연도(2026년)와 기간 길이(16년)는 서로 다른 의미이므로 구분한다.
+const NUMBER_CORE = String.raw`(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?`;
+const NUMBER_UNIT = String.raw`(?:\s*(?:억|조|만)\s*)?(?:원|명|개|건|가구|대|톤|달러|불|곳|개소|배|점|차례|회|종|ha|㎡|㎞|km|mg|도|%|％)(?:\s*p)?`;
+const RANGE_SEPARATOR = String.raw`(?:~|～|∼|–|—|-)`;
+const NUMBER_PATTERN = String.raw`(?:${NUMBER_CORE}\s*(?:${NUMBER_UNIT})?\s*${RANGE_SEPARATOR}\s*${NUMBER_CORE}\s*${NUMBER_UNIT}|${NUMBER_CORE}\s*${NUMBER_UNIT})`;
+const DURATION_PATTERN = String.raw`(?:${NUMBER_CORE}\s*${RANGE_SEPARATOR}\s*${NUMBER_CORE}|${NUMBER_CORE})\s*(?:년|개월|주|일|시간)(?:째|간|동안)?`;
+const TRACK_PATTERN = String.raw`(?:${NUMBER_PATTERN}|${DURATION_PATTERN})`;
+export const NUM = new RegExp(NUMBER_PATTERN, 'g');
+
+export interface NumericOccurrence {
+  value: string;
+  start: number;
+  end: number;
+  context: string;
+  sentence: string;
+  label: string;
+  isRange: boolean;
+  category: '수치' | '기간 길이';
+}
+
+// 달력 날짜의 '일'은 지속 기간이 아니다. 먼저 날짜 전체의 위치를 확보해
+// '2026년 5월 19일' / '3월 13일' 내부의 '19일' / '13일'을 제외한다.
+// '3일간', '16년째' 등 실제 기간 표현은 날짜 영역 밖에서 계속 추적한다.
+function calendarDateSpans(text: string): Array<{ start: number; end: number }> {
+  const datePattern = /(?:\d{4}\s*년\s*)?\d{1,2}\s*월\s*\d{1,2}\s*일/g;
+  return [...text.matchAll(datePattern)].map((match) => ({
+    start: match.index ?? 0,
+    end: (match.index ?? 0) + match[0].length,
+  }));
+}
+
+export function extractNumericOccurrences(text: string): NumericOccurrence[] {
+  const dateSpans = calendarDateSpans(text);
+  const pattern = new RegExp(TRACK_PATTERN, 'g');
+  const occurrences: NumericOccurrence[] = [];
+  for (const match of text.matchAll(pattern)) {
+    const start = match.index ?? 0;
+    const end = start + match[0].length;
+    // 날짜 내부에 포함된 수치·기간 표현은 독립된 추적 항목으로 중복 추출하지 않는다.
+    if (dateSpans.some((date) => start < date.end && end > date.start)) continue;
+    const value = match[0].trim();
+    // 2026년, 2026년도처럼 네 자리 연도는 기간 길이로 취급하지 않는다.
+    if (/^20\d{2}\s*년(?:도)?$/.test(value)) continue;
+    // '2026년' 내부에 겹치는 부분 문자열을 기간 길이로 오인하지 않는다.
+    if (start > 0 && /[\d]/.test(text[start - 1])) continue;
+    const before = text.slice(0, start);
+    const after = text.slice(end);
+    const left = Math.max(before.lastIndexOf('.'), before.lastIndexOf('!'), before.lastIndexOf('?'), before.lastIndexOf('\n')) + 1;
+    const rightCandidates = [after.indexOf('.'), after.indexOf('!'), after.indexOf('?'), after.indexOf('\n')].filter((n) => n >= 0);
+    const right = rightCandidates.length ? end + Math.min(...rightCandidates) + 1 : text.length;
+    const sentence = text.slice(left, right).trim();
+    const prefix = text.slice(left, start).trim().replace(/[,;:]\s*$/, '');
+    const category = new RegExp(String.raw`^${DURATION_PATTERN}$`).test(value) ? '기간 길이' : '수치';
+    occurrences.push({
+      value, start, end, sentence,
+      label: prefix.slice(-45) || '항목명 확인 필요',
+      context: text.slice(Math.max(0, start - 45), Math.min(text.length, end + 45)),
+      isRange: new RegExp(String.raw`^${NUMBER_CORE}\s*(?:${NUMBER_UNIT})?\s*${RANGE_SEPARATOR}\s*${NUMBER_CORE}`).test(value),
+      category,
+    });
+  }
+  return occurrences;
+}
 
 const PER =
   /['’]?\d{2,4}\s*년\s*\d{1,2}\s*월(?:\s*\d{1,2}\s*일)?|\d{4}\s*년(?:도)?|['’]\d{2}\s*\.\s*\d{1,2}(?:\s*\.\s*\d{1,2})?|\d{1,2}\s*월\s*\d{1,2}\s*일|제?\s*\d\s*분기|상반기|하반기/g;
