@@ -1,0 +1,193 @@
+[
+  {
+    "source": "정책브리핑",
+    "aliases": [],
+    "category": "정부 정책포털",
+    "review_aliases": []
+  },
+  {
+    "source": "국무조정실",
+    "aliases": [
+      "국조실"
+    ],
+    "category": "중앙행정기관",
+    "review_aliases": []
+  },
+  {
+    "source": "국민건강보험공단",
+    "aliases": [
+      "건보공단",
+      "건강보험공단",
+      "국민건보공단"
+    ],
+    "category": "공공기관",
+    "review_aliases": []
+  },
+  {
+    "source": "교육부",
+    "aliases": [],
+    "category": "중앙행정기관",
+    "review_aliases": []
+  },
+  {
+    "source": "서울특별시교육청",
+    "aliases": [
+      "서울시교육청",
+      "서울교육청"
+    ],
+    "category": "교육행정기관",
+    "review_aliases": []
+  },
+  {
+    "source": "식품의약품안전처",
+    "aliases": [
+      "식약처"
+    ],
+    "category": "중앙행정기관",
+    "review_aliases": []
+  },
+  {
+    "source": "보건복지부",
+    "aliases": [
+      "복지부"
+    ],
+    "category": "중앙행정기관",
+    "review_aliases": []
+  },
+  {
+    "source": "기획재정부",
+    "aliases": [
+      "기재부"
+    ],
+    "category": "중앙행정기관",
+    "review_aliases": []
+  },
+  {
+    "source": "질병관리청",
+    "aliases": [
+      "질병청"
+    ],
+    "category": "중앙행정기관",
+    "review_aliases": []
+  },
+  {
+    "source": "경찰청",
+    "aliases": [],
+    "category": "중앙행정기관",
+    "review_aliases": []
+  },
+  {
+    "source": "법무부",
+    "aliases": [],
+    "category": "중앙행정기관",
+    "review_aliases": []
+  },
+  {
+    "source": "공정거래위원회",
+    "aliases": [
+      "공정위"
+    ],
+    "category": "중앙행정기관",
+    "review_aliases": []
+  },
+  {
+    "source": "법제처",
+    "aliases": [],
+    "category": "중앙행정기관",
+    "review_aliases": []
+  },
+  {
+    "source": "중소벤처기업부",
+    "aliases": [
+      "중기부",
+      "중기벤처부"
+    ],
+    "category": "중앙행정기관",
+    "review_aliases": []
+  },
+  {
+    "source": "과학기술정보통신부",
+    "aliases": [
+      "과기정통부"
+    ],
+    "category": "중앙행정기관",
+    "review_aliases": [
+      "과기부"
+    ]
+  },
+  {
+    "source": "개인정보보호위원회",
+    "aliases": [
+      "개인정보위",
+      "개보위",
+      "개인정보위원회"
+    ],
+    "category": "중앙행정기관",
+    "review_aliases": []
+  },
+  {
+    "source": "지식재산처",
+    "aliases": [
+      "지재처"
+    ],
+    "category": "중앙행정기관",
+    "review_aliases": []
+  },
+  {
+    "source": "소방청",
+    "aliases": [],
+    "category": "중앙행정기관",
+    "review_aliases": []
+  },
+  {
+    "source": "고용노동부",
+    "aliases": [
+      "고용부"
+    ],
+    "category": "중앙행정기관",
+    "review_aliases": []
+  },
+  {
+    "source": "국가교육위원회",
+    "aliases": [
+      "국교위",
+      "국가교육위"
+    ],
+    "category": "중앙행정기관",
+    "review_aliases": []
+  },
+  {
+    "source": "행정안전부",
+    "aliases": [
+      "행안부"
+    ],
+    "category": "중앙행정기관",
+    "review_aliases": []
+  },
+  {
+    "source": "환경부",
+    "aliases": [],
+    "category": "중앙행정기관",
+    "review_aliases": []
+  },
+  {
+    "source": "국토교통부",
+    "aliases": [
+      "국토부"
+    ],
+    "category": "중앙행정기관",
+    "review_aliases": []
+  },
+  {
+    "source": "산업통상자원부",
+    "aliases": [],
+    "category": "중앙행정기관",
+    "review_aliases": []
+  },
+  {
+    "source": "기상청",
+    "aliases": [],
+    "category": "중앙행정기관",
+    "review_aliases": []
+  }
+]

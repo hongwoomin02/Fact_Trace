@@ -3204,3 +3204,42 @@ mark.text-miss {
 
 /* C1/C3: 누락 또는 사건 불일치 주의 */
 .text-extraction-warning { padding: 10px 12px; margin: 10px 0; border: 1px solid #d7a24c; border-radius: 6px; color: #875410; background: #fff8eb; font-size: 0.9rem; }
+
+/* 교수 피드백: 날짜·수치 해석 안내 */
+.text-interpretation-note { margin: 12px 0; font-size: 0.88rem; line-height: 1.6; color: #475569; }
+.text-numeric-occurrences { margin-top: 12px; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.88rem; }
+.text-numeric-occurrences summary { cursor: pointer; font-weight: 600; }
+.text-numeric-occurrences ol { padding-left: 22px; }
+.text-numeric-occurrences li { margin: 8px 0; overflow-wrap: anywhere; }
+
+/* 기관명 확인 안내: 기존 일치 항목 패널에 맞춘 보조 문구 */
+.text-check-help {
+  margin: 10px 0 0;
+  padding-top: 9px;
+  border-top: 1px solid var(--border-color);
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.6;
+  font-weight: 400;
+}
+
+.text-agency-neutral { color: var(--text-color); font-weight: 600; }
+.text-agency-status { color: var(--text-muted); font-size: 11px; font-weight: 400; }
+.text-agency-item { display: inline; }
+
+/* 기간 길이 등 네 글자 항목명 줄바꿈 방지 */
+.text-components dl,
+.text-check-row {
+  grid-template-columns: 72px minmax(0, 1fr);
+}
+.text-components dt,
+.text-check-key {
+  white-space: nowrap;
+  word-break: keep-all;
+}
+@media (max-width: 640px) {
+  .text-components dl,
+  .text-check-row {
+    grid-template-columns: 72px minmax(0, 1fr);
+  }
+}
