@@ -3,9 +3,11 @@
 **/__pycache__/
 **/.venv/
 .pytest_cache/
+.diagnostics/
 **/.env*
 !**/.env.example
 **/storage/
 video-generation/templates/*.mp4
+video-generation/templates/_originals_*/
 *.log
 .vercel

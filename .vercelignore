@@ -11,3 +11,4 @@
 **/nli_model/**
 .git/**
 .vercel/**
+.diagnostics/**
